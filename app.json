@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "ATRIO",
+    "slug": "atrio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "atrio",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.atrio.app"
+    },
+    "android": {
+      "package": "com.atrio.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
