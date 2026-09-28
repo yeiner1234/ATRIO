@@ -8,3 +8,4 @@ export * from './Checkout';
 export * from './Admin';
 export * from './Pedidos';
 export * from './Reportes';
+export * from './Tarjeta';
