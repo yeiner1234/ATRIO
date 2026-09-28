@@ -10,7 +10,7 @@ export interface ResumenDashboardAdmin {
   pedidosEntregados: number;
 }
 
-// Interfaz desacoplada del futuro módulo de pedidos (Hans). El Dashboard y
+// Interfaz desacoplada del módulo de pedidos (Hans). El Dashboard y
 // /admin/pedidos solo conocen esta forma; no dependen de su implementación.
 export interface PedidoReciente {
   id: string;
@@ -39,17 +39,4 @@ export interface ProductoStockBajo {
   colorId: string;
   colorNombre: string;
   stock: number;
-}
-
-export interface ConteoNombre {
-  nombre: string;
-  cantidad: number;
-}
-
-export interface ReporteAdmin {
-  ventasTotales: number;
-  pedidosTotales: number;
-  ticketPromedio: number;
-  productosMasVendidos: ConteoNombre[];
-  categoriasMasVendidas: ConteoNombre[];
 }

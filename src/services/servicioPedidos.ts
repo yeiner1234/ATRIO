@@ -32,6 +32,14 @@ interface FilaItemPedido {
   color_nombre: string | null;
   cantidad: number;
   precio_unitario: number;
+  // Se resuelve vía variante_id → productos → categorías (no es una
+  // "foto" del momento de compra como el resto de esta fila: es la
+  // categoría ACTUAL del producto, solo para poder reportar por
+  // categoría — si el producto cambia de categoría después, el reporte
+  // refleja la categoría de hoy, no la de cuando se compró).
+  variantes_producto: {
+    productos: { categoria_id: string; categorias: { nombre: string } | { nombre: string }[] | null } | null;
+  } | null;
 }
 
 interface FilaPedido {
@@ -55,14 +63,19 @@ interface FilaPedido {
 // producto real se edita o se borra después. Por eso NO se reconstruye
 // contra el producto real: se arma un `Producto` sintético solo con lo
 // necesario para mostrar la línea del pedido (sin imagen real, porque
-// items_pedido no la guarda).
+// items_pedido no la guarda). La categoría es la excepción: se resuelve en
+// vivo (ver comentario en FilaItemPedido) porque Reportes la necesita para
+// agrupar "categorías más vendidas".
 function productoHistoricoDesde(fila: FilaItemPedido): Producto {
+  const productoRelacionado = fila.variantes_producto?.productos;
+  const categoriaFila = productoRelacionado?.categorias;
+  const categoria = Array.isArray(categoriaFila) ? categoriaFila[0] : categoriaFila;
   return {
     id: fila.variante_id,
     sku: '',
     nombre: fila.nombre_producto,
-    categoriaId: '',
-    categoriaNombre: '',
+    categoriaId: productoRelacionado?.categoria_id ?? '',
+    categoriaNombre: categoria?.nombre ?? '',
     precio: fila.precio_unitario,
     descripcion: '',
     composicion: '',
@@ -136,7 +149,10 @@ function mapearPedido(
 
 const SELECT_PEDIDO = `
   id, usuario_id, numero, estado, tipo_entrega, direccion_id, subtotal, descuento, igv, total, creado_en,
-  items_pedido ( variante_id, nombre_producto, talla, color_nombre, cantidad, precio_unitario ),
+  items_pedido (
+    variante_id, nombre_producto, talla, color_nombre, cantidad, precio_unitario,
+    variantes_producto ( productos ( categoria_id, categorias ( nombre ) ) )
+  ),
   pagos ( metodo )
 `;
 
