@@ -11,7 +11,10 @@ export const COLORS_OSCURO: Record<keyof typeof COLORS, string> = {
   // Superficie "elevada" (tarjetas, inputs) — debe ser MÁS clara que el fondo
   // pero seguir siendo oscura. Antes valía lo mismo que `tinta` (el color del
   // texto), así que cualquier campo/tarjeta con fondo `blanco` + texto `tinta`
-  // quedaba invisible (texto y fondo del mismo color). Bug real, corregido.
+  // quedaba invisible (texto y fondo del mismo color). Bug real, corregido y
+  // verificado con capturas de pantalla — se mantiene sobre el valor que
+  // trajo main porque ese quedaba más oscuro que `lino`, invirtiendo la
+  // jerarquía (la superficie "elevada" terminaba más oscura que la base).
   blanco: '#2C2A1D',
 
   textoSecundario: `rgba(${TEXTO}, 0.55)`,
