@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
 import { FilaPedidoReciente } from '@/components/admin/FilaPedidoReciente';
-import { BotonCerrarSesionAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
+import { AccionesAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
 import { ESPACIO, MEDIDAS, TIPOGRAFIA } from '@/constants/theme';
 import { useTema } from '@/hooks/useTema';
 import { servicioAdmin } from '@/services/servicioAdmin';
@@ -32,7 +32,7 @@ export default function PantallaPedidosAdmin() {
 
   return (
     <SafeAreaView style={[styles.pantalla, { backgroundColor: colores.papel }]} edges={['top']}>
-      <EncabezadoPantalla titulo="Pedidos" subtitulo="VENTAS Y ESTADOS" derecha={<BotonCerrarSesionAdmin />} />
+      <EncabezadoPantalla titulo="Pedidos" subtitulo="VENTAS Y ESTADOS" derecha={<AccionesAdmin />} />
       <NavegacionAdmin />
 
       <ScrollView contentContainerStyle={styles.contenido} showsVerticalScrollIndicator={false}>

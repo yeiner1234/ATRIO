@@ -1,4 +1,5 @@
 import { isRunningInExpoGo } from 'expo';
+import { router } from 'expo-router';
 import { Alert, Platform, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
@@ -10,7 +11,6 @@ import { servicioNotificaciones } from '@/services/servicioNotificaciones';
 import { servicioCorreos } from '@/services/servicioCorreos';
 import { servicioBiometria } from '@/services/servicioBiometria';
 import { CLAVES_ALMACENAMIENTO, servicioAlmacenamiento } from '@/services/storageService';
-import { usuarioMock } from '@/data/usuarioMock';
 
 export default function PantallaConfiguracion() {
   const { preferencias, alternarPreferencia } = useConfiguracion();
@@ -42,9 +42,13 @@ export default function PantallaConfiguracion() {
   };
 
   const manejarCorreosPromocionales = async (activar: boolean) => {
+    if (!usuario) {
+      Alert.alert('Inicia sesión', 'Debes iniciar sesión para gestionar correos promocionales.');
+      return;
+    }
     const exito = activar
-      ? await servicioCorreos.suscribir(usuarioMock.email)
-      : await servicioCorreos.cancelarSuscripcion(usuarioMock.email);
+      ? await servicioCorreos.suscribir(usuario.email)
+      : await servicioCorreos.cancelarSuscripcion(usuario.email);
 
     if (exito) {
       alternarPreferencia('correosPromocionales');
@@ -77,9 +81,14 @@ export default function PantallaConfiguracion() {
         CLAVES_ALMACENAMIENTO.usuarioBiometria,
         usuario.id,
       );
-    } else {
-      await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.usuarioBiometria);
+      alternarPreferencia('biometria');
+      // Ya quedó activada: no hace falta seguir mirando esta pantalla — la
+      // próxima vez que haga falta iniciar sesión, se llama sola (ver
+      // useInicioSesion.ts).
+      router.back();
+      return;
     }
+    await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.usuarioBiometria);
     alternarPreferencia('biometria');
   };
 

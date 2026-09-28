@@ -23,7 +23,7 @@ export function FilaFavorito({
   return (
     <View style={styles.contenedor}>
       <Pressable style={styles.miniatura} onPress={alPresionar} accessibilityRole="button">
-        <MarcadorImagenProducto llenar sinEtiqueta />
+        <MarcadorImagenProducto uri={producto.imagenes[0]} llenar sinEtiqueta />
       </Pressable>
 
       <View style={styles.info}>

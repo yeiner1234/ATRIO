@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useConfiguracion } from '@/hooks/useConfiguracion';
 import { CLAVES_ALMACENAMIENTO, servicioAlmacenamiento } from '@/services/storageService';
@@ -131,7 +131,7 @@ export function useInicioSesion(): EstadoInicioSesion {
       await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.intentosInicioSesion);
       await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.bloqueoInicioSesion);
       setIntentos(0);
-      router.replace(usuario.rol === 'propietaria' ? '/admin' : '/(tabs)');
+      router.replace(usuario.rol === 'administrador' ? '/admin' : '/(tabs)');
     } catch {
       const siguiente = intentos + 1;
       if (siguiente >= INTENTOS_MAXIMOS) {
@@ -163,13 +163,26 @@ export function useInicioSesion(): EstadoInicioSesion {
       await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.intentosInicioSesion);
       await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.bloqueoInicioSesion);
       setIntentos(0);
-      router.replace(usuario.rol === 'propietaria' ? '/admin' : '/(tabs)');
+      router.replace(usuario.rol === 'administrador' ? '/admin' : '/(tabs)');
     } catch {
       setMensajeError('No se pudo verificar tu identidad. Inicia sesión con correo y contraseña.');
     } finally {
       setCargando(false);
     }
   }, [bloqueado, biometriaActiva, cargando, iniciarSesionBiometrica, limpiarError]);
+
+  // Con biometría activa, no se espera a que toquen el botón: se llama sola
+  // apenas se puede, una sola vez por visita a esta pantalla (login normal
+  // tras cerrar sesión, o al reabrir la app). Si falla o la cancelan, el
+  // formulario de correo/contraseña ya está ahí debajo, listo para usarse.
+  const yaSeAutoIntento = useRef(false);
+  useEffect(() => {
+    // A propósito solo depende de `biometriaActiva`: es un disparo único,
+    // no debe repetirse cada vez que cambian cargando/bloqueado.
+    if (!biometriaActiva || yaSeAutoIntento.current || cargando || bloqueado) return;
+    yaSeAutoIntento.current = true;
+    void iniciarSesionConBiometria();
+  }, [biometriaActiva]);
 
   return {
     correo,

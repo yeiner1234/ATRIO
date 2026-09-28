@@ -29,7 +29,7 @@ export default function PantallaPerfil() {
           <Text style={styles.nombre}>{usuario?.nombre ?? 'Usuario'}</Text>
           <Text style={styles.dato}>{usuario?.email ?? ''}</Text>
           <Text style={styles.dato}>{usuario?.celular ?? ''}</Text>
-          <Text style={styles.dato}>{usuario?.rol === 'propietaria' ? 'PROPIETARIA' : 'CLIENTE'}</Text>
+          <Text style={styles.dato}>{usuario?.rol === 'administrador' ? 'ADMINISTRADOR' : 'CLIENTE'}</Text>
         </View>
 
         <View style={styles.seccion}>

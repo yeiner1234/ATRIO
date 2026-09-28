@@ -12,8 +12,8 @@ import { ESPACIO, MEDIDAS, RADIO, TIPOGRAFIA } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useCarrito } from '@/hooks/useCarrito';
 import { useCheckout } from '@/hooks/useCheckout';
+import { useConfiguracion } from '@/hooks/useConfiguracion';
 import { servicioPedidos } from '@/services/servicioPedidos';
-import { servicioProductos } from '@/services/servicioProductos';
 import { metodosPago } from '@/data/metodosPago';
 import type { MetodoPago } from '@/types';
 
@@ -22,8 +22,11 @@ export default function PantallaPago() {
   const { usuario } = useAuth();
   const { vaciarCarrito } = useCarrito();
   const { datosPago, reiniciarCheckout } = useCheckout();
+  const { preferencias } = useConfiguracion();
 
-  const [metodoPago, setMetodoPago] = useState<MetodoPago | null>(null);
+  // Preseleccionada desde Perfil → Métodos de pago (solo la preferencia, ver
+  // la decisión de diseño documentada en app/metodos-pago.tsx).
+  const [metodoPago, setMetodoPago] = useState<MetodoPago | null>(preferencias.metodoPagoPreferido);
   const [pagando, setPagando] = useState(false);
 
   if (!datosPago) {
@@ -47,26 +50,35 @@ export default function PantallaPago() {
       return;
     }
 
-    setPagando(true);
-    try {
-      await servicioProductos.descontarStock(datosPago.items);
-    } catch (error) {
-      setPagando(false);
-      Alert.alert('Sin stock', (error as Error).message);
+    // Pendiente real (ver auditoría): la RPC confirmar_compra todavía no
+    // sabe de cupones — no hay tabla `cupones` en el esquema confirmado, así
+    // que aplicarlos aquí sería cobrar un total distinto al que la nube
+    // registra. Se bloquea en vez de cobrar de más en silencio.
+    if (datosPago.resumen.descuento > 0) {
+      Alert.alert(
+        'Cupón no disponible todavía',
+        'Los cupones de descuento aún no están conectados al cobro real. Quita el cupón del carrito para continuar.',
+      );
       return;
     }
 
-    const pedido = await servicioPedidos.crearPedido({
-      ...datosPago,
-      usuarioId: usuario.id,
-      cliente: usuario.nombre,
-      metodoPago,
-    });
-    vaciarCarrito();
-    reiniciarCheckout();
-    // Cierra Checkout y Pago: terminada la compra, "atrás" ya no vuelve a ellos.
-    router.dismissAll();
-    router.push({ pathname: '/confirmacion', params: { numero: pedido.numero } });
+    setPagando(true);
+    try {
+      const { numero } = await servicioPedidos.confirmarCompra({
+        metodoPago,
+        tipoEntrega: datosPago.metodoEntrega.tipo,
+        direccionId: datosPago.direccion?.id ?? null,
+      });
+      vaciarCarrito();
+      reiniciarCheckout();
+      // Cierra Checkout y Pago: terminada la compra, "atrás" ya no vuelve a ellos.
+      router.dismissAll();
+      router.push({ pathname: '/confirmacion', params: { numero } });
+    } catch (error) {
+      Alert.alert('No se pudo confirmar la compra', (error as Error).message);
+    } finally {
+      setPagando(false);
+    }
   }
 
   return (

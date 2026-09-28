@@ -27,11 +27,15 @@ export default function PantallaConfirmacion() {
 
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     servicioPedidos
       .obtenerPedido(numero)
       .then(setPedido)
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'No se pudo cargar la confirmación.');
+      })
       .finally(() => setCargando(false));
   }, [numero]);
 
@@ -39,6 +43,20 @@ export default function PantallaConfirmacion() {
     return (
       <SafeAreaView style={[styles.pantalla, styles.centrado]}>
         <ActivityIndicator color={COLORS.tinta} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.pantalla}>
+        <EstadoVacio
+          icono="alert-circle-outline"
+          titulo="No se pudo cargar tu confirmación"
+          descripcion={error}
+          textoBoton="VER MIS PEDIDOS"
+          alPresionarBoton={() => router.replace('/pedidos')}
+        />
       </SafeAreaView>
     );
   }

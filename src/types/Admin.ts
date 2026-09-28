@@ -1,5 +1,4 @@
-// Estados de pedido: deben coincidir con los que use el módulo de pedidos
-// de Hans cuando se conecte de verdad.
+// Mismos valores que el CHECK real de la columna pedidos.estado en Supabase.
 export type EstadoPedido = 'preparado' | 'en_camino' | 'entregado' | 'cancelado' | 'devuelto';
 
 export interface ResumenDashboardAdmin {
@@ -40,4 +39,17 @@ export interface ProductoStockBajo {
   colorId: string;
   colorNombre: string;
   stock: number;
+}
+
+export interface ConteoNombre {
+  nombre: string;
+  cantidad: number;
+}
+
+export interface ReporteAdmin {
+  ventasTotales: number;
+  pedidosTotales: number;
+  ticketPromedio: number;
+  productosMasVendidos: ConteoNombre[];
+  categoriasMasVendidas: ConteoNombre[];
 }

@@ -75,6 +75,36 @@ export function BotonCerrarSesionAdmin() {
   );
 }
 
+// Acceso a Ajustes (incluye el interruptor de modo oscuro) desde el panel
+// admin — reusa la MISMA pantalla /configuracion del lado público, sin
+// duplicar el interruptor ni su lógica.
+function BotonAjustesAdmin() {
+  const { colores } = useTema();
+
+  return (
+    <Pressable
+      onPress={() => router.push('/configuracion')}
+      style={styles.ajustes}
+      accessibilityRole="button"
+      accessibilityLabel="Ajustes"
+      hitSlop={8}
+    >
+      <Ionicons name="settings-outline" size={16} color={colores.tinta60} />
+    </Pressable>
+  );
+}
+
+// Combina Ajustes + Cerrar sesión — reemplaza a <BotonCerrarSesionAdmin />
+// en las pantallas del panel admin para que todas tengan acceso a Ajustes.
+export function AccionesAdmin() {
+  return (
+    <View style={styles.acciones}>
+      <BotonAjustesAdmin />
+      <BotonCerrarSesionAdmin />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   contenedor: { borderBottomWidth: 1 },
   items: {
@@ -98,6 +128,13 @@ const styles = StyleSheet.create({
     minHeight: MEDIDAS.areaTactilMinima,
     paddingHorizontal: ESPACIO.xs,
   },
+  ajustes: {
+    minWidth: MEDIDAS.areaTactilMinima,
+    minHeight: MEDIDAS.areaTactilMinima,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acciones: { flexDirection: 'row', alignItems: 'center' },
   itemTexto: {
     fontFamily: TIPOGRAFIA.etiqueta,
     fontSize: 11.5,

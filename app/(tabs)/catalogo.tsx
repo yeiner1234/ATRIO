@@ -8,13 +8,14 @@ import { CampoBusqueda } from '@/components/common/CampoBusqueda';
 import { ChipCategoria } from '@/components/products/ChipCategoria';
 import { PanelFiltros } from '@/components/products/PanelFiltros';
 import { TarjetaProducto } from '@/components/products/TarjetaProducto';
-import { COLORS } from '@/constants/colors';
 import { ESPACIO, MEDIDAS, TIPOGRAFIA } from '@/constants/theme';
 import { useCatalogo } from '@/hooks/useCatalogo';
 import { useCategorias } from '@/hooks/useCategorias';
 import { useFavoritos } from '@/hooks/useFavoritos';
+import { useTema } from '@/hooks/useTema';
 
 export default function PantallaCatalogo() {
+  const { colores } = useTema();
   const parametros = useLocalSearchParams<{ categoria?: string }>();
   const categorias = useCategorias();
   const { esFavorito, alternarFavorito } = useFavoritos();
@@ -47,8 +48,8 @@ export default function PantallaCatalogo() {
       : (categorias.find((c) => c.id === categoriaActiva)?.nombre ?? 'TODO').toUpperCase();
 
   return (
-    <SafeAreaView style={styles.pantalla} edges={['top']}>
-      <View style={styles.bloqueSuperior}>
+    <SafeAreaView style={[styles.pantalla, { backgroundColor: colores.papel }]} edges={['top']}>
+      <View style={[styles.bloqueSuperior, { borderBottomColor: colores.borde }]}>
         <View style={styles.filaBusqueda}>
           <CampoBusqueda
             valor={terminoBusqueda}
@@ -56,12 +57,12 @@ export default function PantallaCatalogo() {
             placeholder="Buscar prendas, marcas, colores"
           />
           <Pressable
-            style={styles.botonOrden}
+            style={[styles.botonOrden, { backgroundColor: colores.tinta }]}
             onPress={() => setPanelVisible(true)}
             accessibilityRole="button"
             accessibilityLabel="Orden y filtros"
           >
-            <Ionicons name="options-outline" size={20} color={COLORS.papel} />
+            <Ionicons name="options-outline" size={20} color={colores.papel} />
           </Pressable>
         </View>
 
@@ -85,7 +86,7 @@ export default function PantallaCatalogo() {
           ))}
         </ScrollView>
 
-        <Text style={styles.contador}>
+        <Text style={[styles.contador, { color: colores.textoSecundario }]}>
           {contadorResultados} {contadorResultados === 1 ? 'RESULTADO' : 'RESULTADOS'} ·{' '}
           {nombreCategoriaActiva}
         </Text>
@@ -139,20 +140,18 @@ export default function PantallaCatalogo() {
 }
 
 const styles = StyleSheet.create({
-  pantalla: { flex: 1, backgroundColor: COLORS.papel },
+  pantalla: { flex: 1 },
   bloqueSuperior: {
     paddingHorizontal: MEDIDAS.margenLateral,
     paddingTop: ESPACIO.md,
     paddingBottom: ESPACIO.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borde,
   },
   filaBusqueda: { flexDirection: 'row', gap: ESPACIO.sm },
   botonOrden: {
     width: MEDIDAS.areaTactilMinima,
     height: MEDIDAS.areaTactilMinima,
     borderRadius: 9,
-    backgroundColor: COLORS.tinta,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -162,7 +161,6 @@ const styles = StyleSheet.create({
     fontFamily: TIPOGRAFIA.mono,
     fontSize: 10,
     letterSpacing: 1,
-    color: COLORS.textoSecundario,
   },
   rejilla: {
     paddingHorizontal: MEDIDAS.margenLateral,

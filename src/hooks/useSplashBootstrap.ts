@@ -66,7 +66,7 @@ export function useSplashBootstrap(): EstadoInicioAplicacion {
 
       let destino: '/(tabs)' | '/(auth)/login' | '/admin' = '/(auth)/login';
       const usuario = await servicioAutenticacion.obtenerUsuarioActual();
-      if (usuario) destino = usuario.rol === 'propietaria' ? '/admin' : '/(tabs)';
+      if (usuario) destino = usuario.rol === 'administrador' ? '/admin' : '/(tabs)';
 
       const transcurrido = Date.now() - inicio;
       if (transcurrido < MS_VISUALIZACION_MINIMA_SPLASH) {

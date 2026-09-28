@@ -1,8 +1,10 @@
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { COLORS } from '@/constants/colors';
 import { RADIO, RELACION_IMAGEN, TIPOGRAFIA } from '@/constants/theme';
 
 interface PropiedadesMarcadorImagenProducto {
+  /** URL o URI real de la foto. Sin esto, se muestra el marcador de posición (rayas). */
+  uri?: string;
   relacion?: number;
   etiquetaDimension?: string;
   radio?: number;
@@ -14,6 +16,7 @@ interface PropiedadesMarcadorImagenProducto {
 const CANTIDAD_RAYAS = 26;
 
 export function MarcadorImagenProducto({
+  uri,
   relacion = RELACION_IMAGEN.producto,
   etiquetaDimension = '900×1200',
   radio = RADIO.imagen,
@@ -21,6 +24,14 @@ export function MarcadorImagenProducto({
   llenar = false,
   style,
 }: PropiedadesMarcadorImagenProducto) {
+  if (uri) {
+    return (
+      <View style={[styles.contenedor, { borderRadius: radio }, llenar ? styles.lleno : { aspectRatio: relacion }, style]}>
+        <Image source={{ uri }} style={styles.imagenReal} resizeMode="cover" />
+      </View>
+    );
+  }
+
   return (
     <View
       style={[
@@ -49,6 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   lleno: StyleSheet.absoluteFill,
+  imagenReal: { width: '100%', height: '100%' },
   rayas: StyleSheet.absoluteFill,
   raya: {
     position: 'absolute',

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormularioProducto } from '@/components/admin/FormularioProducto';
-import { BotonCerrarSesionAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
+import { AccionesAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
 import { ESPACIO, MEDIDAS, TIPOGRAFIA } from '@/constants/theme';
 import { useCategorias } from '@/hooks/useCategorias';
@@ -30,7 +30,7 @@ export default function PantallaEditarProducto() {
   return (
     <View style={[styles.pantalla, { backgroundColor: colores.papel }]}>
       <SafeAreaView edges={['top']} style={styles.barraSuperior}>
-        <BotonCerrarSesionAdmin />
+        <AccionesAdmin />
       </SafeAreaView>
       <NavegacionAdmin />
       <EncabezadoPantalla titulo="Editar producto" conBotonVolver />

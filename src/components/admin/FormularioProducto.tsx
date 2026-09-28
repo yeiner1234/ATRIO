@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { BotonPrimario } from '@/components/common/BotonPrimario';
 import { CampoTexto } from '@/components/common/CampoTexto';
 import { TablaStockVariantes } from '@/components/admin/TablaStockVariantes';
@@ -26,7 +25,6 @@ function textoANumero(texto: string): number {
 
 export function FormularioProducto({ producto, categorias }: PropiedadesFormularioProducto) {
   const { colores: tema } = useTema();
-  const [urlImagenNueva, setUrlImagenNueva] = useState('');
   const {
     generales,
     actualizarGeneral,
@@ -42,10 +40,13 @@ export function FormularioProducto({ producto, categorias }: PropiedadesFormular
     obtenerStock,
     cambiarStock,
     imagenes,
-    agregarImagen,
+    agregarImagenDesdeGaleria,
+    cargandoImagen,
+    errorImagen,
     eliminarImagen,
     moverImagen,
     guardando,
+    errorGuardado,
     guardar,
     esEdicion,
   } = useFormularioProducto(producto);
@@ -252,70 +253,79 @@ export function FormularioProducto({ producto, categorias }: PropiedadesFormular
       <View style={[styles.separador, { backgroundColor: tema.borde }]} />
       <Text style={[styles.tituloSeccion, { color: tema.textoSecundario }]}>FOTOGRAFÍAS</Text>
       <Text style={[styles.notaFotos, { color: tema.textoSecundario }]}>
-        Pega la URL de la imagen — la subida de archivos llega cuando se conecte Supabase Storage.
+        Elige fotos desde la galería del teléfono. Sin Supabase Storage conectado, se guardan en
+        este dispositivo; cuando se conecte la nube se subirán automáticamente sin cambiar esta
+        pantalla.
       </Text>
 
-      {imagenes.map((url, indice) => (
-        <View key={`${url}-${indice}`} style={[styles.filaImagen, { borderColor: tema.borde }]}>
-          <Text style={[styles.textoUrl, { color: tema.tinta }]} numberOfLines={1}>
-            {url}
-          </Text>
-          <View style={styles.accionesImagen}>
-            <Pressable
-              onPress={() => moverImagen(indice, -1)}
-              disabled={indice === 0}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Subir imagen"
-            >
-              <Ionicons name="chevron-up" size={18} color={indice === 0 ? tema.tinta20 : tema.tinta} />
-            </Pressable>
-            <Pressable
-              onPress={() => moverImagen(indice, 1)}
-              disabled={indice === imagenes.length - 1}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Bajar imagen"
-            >
-              <Ionicons
-                name="chevron-down"
-                size={18}
-                color={indice === imagenes.length - 1 ? tema.tinta20 : tema.tinta}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => eliminarImagen(indice)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Eliminar imagen"
-            >
-              <Ionicons name="trash-outline" size={18} color={tema.arcilla} />
-            </Pressable>
-          </View>
+      {imagenes.length > 0 ? (
+        <View style={styles.grillaImagenes}>
+          {imagenes.map((uri, indice) => (
+            <View key={`${uri}-${indice}`} style={[styles.tarjetaImagen, { borderColor: tema.borde }]}>
+              <Image source={{ uri }} style={styles.miniatura} resizeMode="cover" />
+              <View style={styles.accionesImagen}>
+                <Pressable
+                  onPress={() => moverImagen(indice, -1)}
+                  disabled={indice === 0}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Mover a la izquierda"
+                >
+                  <Ionicons
+                    name="chevron-back"
+                    size={16}
+                    color={indice === 0 ? tema.tinta20 : tema.tinta}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => eliminarImagen(indice)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Eliminar imagen"
+                >
+                  <Ionicons name="trash-outline" size={16} color={tema.arcilla} />
+                </Pressable>
+                <Pressable
+                  onPress={() => moverImagen(indice, 1)}
+                  disabled={indice === imagenes.length - 1}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Mover a la derecha"
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={indice === imagenes.length - 1 ? tema.tinta20 : tema.tinta}
+                  />
+                </Pressable>
+              </View>
+              {indice === 0 ? (
+                <View style={[styles.insigniaPortada, { backgroundColor: tema.tinta }]}>
+                  <Text style={[styles.textoInsignia, { color: tema.papel }]}>PORTADA</Text>
+                </View>
+              ) : null}
+            </View>
+          ))}
         </View>
-      ))}
+      ) : null}
 
-      <View style={styles.filaAgregarImagen}>
-        <TextInput
-          style={[styles.entradaUrl, { borderColor: tema.borde, color: tema.tinta, backgroundColor: tema.blanco }]}
-          value={urlImagenNueva}
-          onChangeText={setUrlImagenNueva}
-          placeholder="https://…"
-          placeholderTextColor={tema.tinta35}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <Pressable
-          style={[styles.botonAgregar, { borderColor: tema.tinta }]}
-          onPress={() => {
-            agregarImagen(urlImagenNueva);
-            setUrlImagenNueva('');
-          }}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.textoBotonAgregar, { color: tema.tinta }]}>AGREGAR</Text>
-        </Pressable>
-      </View>
+      <Pressable
+        style={[styles.botonGaleria, { borderColor: tema.tinta }]}
+        onPress={agregarImagenDesdeGaleria}
+        disabled={cargandoImagen}
+        accessibilityRole="button"
+        accessibilityLabel="Elegir foto de la galería"
+      >
+        <Ionicons name="image-outline" size={18} color={tema.tinta} />
+        <Text style={[styles.textoBotonGaleria, { color: tema.tinta }]}>
+          {cargandoImagen ? 'ABRIENDO GALERÍA…' : 'ELEGIR FOTO DE LA GALERÍA'}
+        </Text>
+      </Pressable>
+      {errorImagen ? <Text style={[styles.error, { color: tema.arcilla }]}>{errorImagen}</Text> : null}
+
+      {errorGuardado ? (
+        <Text style={[styles.error, { color: tema.arcilla }]}>{errorGuardado}</Text>
+      ) : null}
 
       <BotonPrimario
         texto={esEdicion ? 'GUARDAR CAMBIOS' : 'CREAR PRODUCTO'}
@@ -375,36 +385,40 @@ const styles = StyleSheet.create({
   swatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 1 },
   textoSwatch: { fontFamily: TIPOGRAFIA.mono, fontSize: 9.5, textAlign: 'center' },
   notaFotos: { fontFamily: TIPOGRAFIA.cuerpo, fontSize: 11.5, lineHeight: 16 },
-  filaImagen: {
+  grillaImagenes: { flexDirection: 'row', flexWrap: 'wrap', gap: ESPACIO.sm },
+  tarjetaImagen: {
+    width: 104,
+    borderWidth: 1,
+    borderRadius: RADIO.imagen,
+    overflow: 'hidden',
+  },
+  miniatura: { width: '100%', height: 104 },
+  accionesImagen: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: ESPACIO.xs,
+    paddingVertical: 4,
+  },
+  insigniaPortada: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: RADIO.chip,
+  },
+  textoInsignia: { fontFamily: TIPOGRAFIA.monoFuerte, fontSize: 8, letterSpacing: 0.5 },
+  botonGaleria: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: ESPACIO.sm,
-    paddingVertical: ESPACIO.sm,
-    paddingHorizontal: ESPACIO.md,
-    borderWidth: 1,
-    borderRadius: RADIO.imagen,
-  },
-  textoUrl: { flex: 1, fontFamily: TIPOGRAFIA.mono, fontSize: 11 },
-  accionesImagen: { flexDirection: 'row', gap: ESPACIO.sm },
-  filaAgregarImagen: { flexDirection: 'row', gap: ESPACIO.sm },
-  entradaUrl: {
-    flex: 1,
-    height: MEDIDAS.areaTactilMinima,
-    paddingHorizontal: ESPACIO.md,
-    borderWidth: 1,
-    borderRadius: RADIO.imagen,
-    fontFamily: TIPOGRAFIA.mono,
-    fontSize: 13,
-  },
-  botonAgregar: {
     minHeight: MEDIDAS.areaTactilMinima,
     paddingHorizontal: ESPACIO.base,
     borderWidth: 1,
     borderRadius: RADIO.imagen,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  textoBotonAgregar: { fontFamily: TIPOGRAFIA.titulo, fontSize: 12 },
+  textoBotonGaleria: { fontFamily: TIPOGRAFIA.titulo, fontSize: 12, letterSpacing: 0.5 },
   botonGuardar: { marginTop: ESPACIO.base },
 });

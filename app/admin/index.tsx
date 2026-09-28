@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
 import { FilaPedidoReciente } from '@/components/admin/FilaPedidoReciente';
 import { FilaStockBajo } from '@/components/admin/FilaStockBajo';
-import { BotonCerrarSesionAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
+import { AccionesAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
 import { TarjetaIndicador } from '@/components/admin/TarjetaIndicador';
 import { ESPACIO, MEDIDAS, TIPOGRAFIA } from '@/constants/theme';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
@@ -16,7 +16,7 @@ export default function PantallaDashboardAdmin() {
 
   return (
     <SafeAreaView style={[styles.pantalla, { backgroundColor: colores.papel }]} edges={['top']}>
-      <EncabezadoPantalla titulo="Administración" subtitulo="DASHBOARD" derecha={<BotonCerrarSesionAdmin />} />
+      <EncabezadoPantalla titulo="Administración" subtitulo="DASHBOARD" derecha={<AccionesAdmin />} />
       <NavegacionAdmin />
 
       <ScrollView contentContainerStyle={styles.contenido} showsVerticalScrollIndicator={false}>

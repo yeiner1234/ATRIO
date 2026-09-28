@@ -1,5 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { cupones } from '@/data/cupones';
+import { servicioCarrito } from '@/services/servicioCarrito';
 import { CLAVES_ALMACENAMIENTO, servicioAlmacenamiento } from '@/services/storageService';
 import type { ItemCarrito, Producto, ResumenCompra } from '@/types';
 import { calcularResumenCompra } from '@/utils/precio';
@@ -16,6 +18,8 @@ interface EstadoCarritoPersistido {
 interface ValorCarritoContext {
   items: ItemCarrito[];
   contador: number;
+  cargando: boolean;
+  error: string | null;
   codigoCupon: string | null;
   porcentajeDescuento: number;
   resumen: ResumenCompra;
@@ -49,81 +53,153 @@ function buscarPorcentajeCupon(codigo: string): number | null {
   return encontrado ? encontrado.porcentaje : null;
 }
 
+// Invitado (sin sesión): carrito local en AsyncStorage, igual que siempre.
+// Autenticado: `carritos`/`items_carrito` de Supabase son la ÚNICA fuente —
+// nunca se mezcla con lo que había como invitado en el mismo dispositivo,
+// por la misma razón que ya se explica en FavoritosContext.
 export function CarritoProvider({ children }: { children: ReactNode }) {
+  const { usuario, listo } = useAuth();
   const [items, setItems] = useState<ItemCarrito[]>([]);
   const [codigoCupon, setCodigoCupon] = useState<string | null>(null);
-  const [hidratado, setHidratado] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    servicioAlmacenamiento
-      .obtenerDato<EstadoCarritoPersistido>(CLAVES_ALMACENAMIENTO.carrito)
-      .then((guardado) => {
-        if (guardado) {
-          setItems(lineasValidas(guardado.items ?? []));
-          setCodigoCupon(guardado.codigoCupon ?? null);
+    if (!listo) return;
+    let cancelado = false;
+    setCargando(true);
+    setError(null);
+
+    async function cargar() {
+      try {
+        if (usuario) {
+          const itemsReales = await servicioCarrito.obtenerItems();
+          if (!cancelado) setItems(itemsReales);
+        } else {
+          const guardado = await servicioAlmacenamiento.obtenerDato<EstadoCarritoPersistido>(
+            CLAVES_ALMACENAMIENTO.carrito,
+          );
+          if (!cancelado) {
+            setItems(lineasValidas(guardado?.items ?? []));
+            setCodigoCupon(guardado?.codigoCupon ?? null);
+          }
         }
-      })
-      .finally(() => setHidratado(true));
-  }, []);
-
-  useEffect(() => {
-    if (hidratado) {
-      const aPersistir: EstadoCarritoPersistido = { items, codigoCupon };
-      void servicioAlmacenamiento.guardarDato(CLAVES_ALMACENAMIENTO.carrito, aPersistir);
-    }
-  }, [items, codigoCupon, hidratado]);
-
-  const agregarItem = useCallback((producto: Producto, varianteId: string, cantidad = 1) => {
-    const variante = buscarVariantePorId(producto, varianteId);
-    if (!variante || variante.stock <= 0) return;
-
-    setItems((previos) => {
-      const existente = previos.find((item) => mismaLinea(item, producto.id, varianteId));
-      if (existente) {
-        return previos.map((item) =>
-          mismaLinea(item, producto.id, varianteId)
-            ? { ...item, cantidad: limitarCantidad(item.cantidad + cantidad, variante.stock) }
-            : item,
-        );
+      } catch (err) {
+        if (!cancelado) {
+          setError(err instanceof Error ? err.message : 'No se pudo cargar el carrito.');
+        }
+      } finally {
+        if (!cancelado) setCargando(false);
       }
-      return [
-        ...previos,
-        {
-          producto,
-          varianteId,
-          talla: variante.talla,
-          colorId: variante.colorId,
-          cantidad: limitarCantidad(cantidad, variante.stock),
-        },
-      ];
-    });
-  }, []);
+    }
 
-  const quitarItem = useCallback((productoId: string, varianteId: string) => {
-    setItems((previos) => previos.filter((item) => !mismaLinea(item, productoId, varianteId)));
-  }, []);
+    void cargar();
+    return () => {
+      cancelado = true;
+    };
+  }, [usuario, listo]);
+
+  // Solo se persiste localmente en modo invitado — con sesión, Supabase ya es la fuente.
+  useEffect(() => {
+    if (!listo || usuario || cargando) return;
+    const aPersistir: EstadoCarritoPersistido = { items, codigoCupon };
+    void servicioAlmacenamiento.guardarDato(CLAVES_ALMACENAMIENTO.carrito, aPersistir);
+  }, [items, codigoCupon, usuario, listo, cargando]);
+
+  const agregarItem = useCallback(
+    (producto: Producto, varianteId: string, cantidad = 1) => {
+      const variante = buscarVariantePorId(producto, varianteId);
+      if (!variante || variante.stock <= 0) return;
+
+      const previos = items;
+      const existente = previos.find((item) => mismaLinea(item, producto.id, varianteId));
+      const nuevaCantidad = limitarCantidad((existente?.cantidad ?? 0) + cantidad, variante.stock);
+
+      const siguientes = existente
+        ? previos.map((item) =>
+            mismaLinea(item, producto.id, varianteId) ? { ...item, cantidad: nuevaCantidad } : item,
+          )
+        : [
+            ...previos,
+            { producto, varianteId, talla: variante.talla, colorId: variante.colorId, cantidad: nuevaCantidad },
+          ];
+
+      setItems(siguientes);
+      setError(null);
+      if (!usuario) return;
+
+      servicioCarrito.fijarCantidad(varianteId, nuevaCantidad).catch((err) => {
+        setItems(previos);
+        setError(err instanceof Error ? err.message : 'No se pudo agregar al carrito.');
+      });
+    },
+    [items, usuario],
+  );
+
+  const quitarItem = useCallback(
+    (productoId: string, varianteId: string) => {
+      const previos = items;
+      setItems(previos.filter((item) => !mismaLinea(item, productoId, varianteId)));
+      setError(null);
+      if (!usuario) return;
+
+      servicioCarrito.quitarItem(varianteId).catch((err) => {
+        setItems(previos);
+        setError(err instanceof Error ? err.message : 'No se pudo quitar el producto.');
+      });
+    },
+    [items, usuario],
+  );
 
   const cambiarCantidad = useCallback(
     (productoId: string, varianteId: string, cantidad: number) => {
-      setItems((previos) => {
-        if (cantidad < CANTIDAD_MINIMA) {
-          return previos.filter((item) => !mismaLinea(item, productoId, varianteId));
+      const previos = items;
+
+      if (cantidad < CANTIDAD_MINIMA) {
+        setItems(previos.filter((item) => !mismaLinea(item, productoId, varianteId)));
+        setError(null);
+        if (usuario) {
+          servicioCarrito.quitarItem(varianteId).catch((err) => {
+            setItems(previos);
+            setError(err instanceof Error ? err.message : 'No se pudo actualizar el carrito.');
+          });
         }
-        return previos.map((item) => {
-          if (!mismaLinea(item, productoId, varianteId)) return item;
-          const variante = buscarVariantePorId(item.producto, varianteId);
-          const tope = variante?.stock ?? CANTIDAD_MAXIMA;
-          return { ...item, cantidad: limitarCantidad(cantidad, tope) };
-        });
+        return;
+      }
+
+      let cantidadFinal = cantidad;
+      const siguientes = previos.map((item) => {
+        if (!mismaLinea(item, productoId, varianteId)) return item;
+        const variante = buscarVariantePorId(item.producto, varianteId);
+        const tope = variante?.stock ?? CANTIDAD_MAXIMA;
+        cantidadFinal = limitarCantidad(cantidad, tope);
+        return { ...item, cantidad: cantidadFinal };
+      });
+
+      setItems(siguientes);
+      setError(null);
+      if (!usuario) return;
+
+      servicioCarrito.fijarCantidad(varianteId, cantidadFinal).catch((err) => {
+        setItems(previos);
+        setError(err instanceof Error ? err.message : 'No se pudo actualizar el carrito.');
       });
     },
-    [],
+    [items, usuario],
   );
 
   const vaciarCarrito = useCallback(() => {
+    const previos = items;
     setItems([]);
     setCodigoCupon(null);
-  }, []);
+    setError(null);
+    if (!usuario) return;
+
+    servicioCarrito.vaciar().catch((err) => {
+      setItems(previos);
+      setError(err instanceof Error ? err.message : 'No se pudo vaciar el carrito.');
+    });
+  }, [items, usuario]);
 
   const aplicarCupon = useCallback((codigo: string) => {
     const porcentaje = buscarPorcentajeCupon(codigo);
@@ -145,6 +221,8 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     () => ({
       items,
       contador,
+      cargando,
+      error,
       codigoCupon,
       porcentajeDescuento,
       resumen,
@@ -158,6 +236,8 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     [
       items,
       contador,
+      cargando,
+      error,
       codigoCupon,
       porcentajeDescuento,
       resumen,

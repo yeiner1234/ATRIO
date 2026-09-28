@@ -1,17 +1,28 @@
-import { categorias } from '@/data/categorias';
-import { colores } from '@/data/colores';
-import { productos as productosSemilla } from '@/data/productos';
+import { supabase } from '@/lib/supabase';
 import type { Categoria, ColorProducto, DatosProductoGenerales, Producto, VarianteProducto } from '@/types';
-import type { ItemCarrito } from '@/types';
-import { buscarVariantePorId } from '@/utils/variantes';
+import { mapearProducto, type FilaProductoSupabase } from './mappers/mapearProducto';
 
-// Almacén en memoria (no AsyncStorage: nunca será la fuente oficial del
-// stock). Las tablas `productos`/`variantes_producto` ya existen en Supabase,
-// pero el rol `anon` todavía no tiene GRANT sobre ellas (ver auditoría) — en
-// cuanto se resuelva, solo cambia el CUERPO de estas funciones, no su forma.
-let almacenProductos: Producto[] = [...productosSemilla];
+// Select anidado único: reconstruye un Producto completo (categoría, variantes
+// con su color, e imágenes) en una sola ida a la base. Nombres de columna
+// exactamente como existen en Supabase (confirmados por Yeiner).
+const SELECT_PRODUCTO = `
+  id, sku, nombre, categoria_id, precio, precio_anterior, descripcion, composicion,
+  confeccion, origen, etiquetas, es_novedad, popularidad_30d, fecha_alta, activo,
+  categorias ( id, nombre ),
+  variantes_producto ( id, talla, color_id, stock, colores ( id, nombre, hex ) ),
+  imagenes_producto ( id, url, orden )
+`;
 
-function generarId(nombre: string): string {
+function requerirSupabase() {
+  if (!supabase) {
+    throw new Error(
+      'Supabase no está configurado en este entorno (faltan EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY).',
+    );
+  }
+  return supabase;
+}
+
+function generarIdProducto(nombre: string): string {
   const base = nombre
     .trim()
     .toLowerCase()
@@ -22,117 +33,278 @@ function generarId(nombre: string): string {
   return `${base || 'producto'}-${Date.now().toString(36)}`;
 }
 
-function coloresDeVariantes(variantes: VarianteProducto[]): ColorProducto[] {
-  const ids = [...new Set(variantes.map((v) => v.colorId))];
-  return ids
-    .map((id) => colores.find((color) => color.id === id))
-    .filter((color): color is ColorProducto => color !== undefined);
-}
-
-function requerirProducto(id: string): Producto {
-  const existente = almacenProductos.find((producto) => producto.id === id);
-  if (!existente) throw new Error(`El producto "${id}" no existe.`);
-  return existente;
+async function obtenerProductoPorIdInterno(id: string): Promise<Producto | undefined> {
+  const { data, error } = await requerirSupabase()
+    .from('productos')
+    .select(SELECT_PRODUCTO)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo cargar el producto "${id}": ${error.message}`);
+  return data ? mapearProducto(data as unknown as FilaProductoSupabase) : undefined;
 }
 
 export const servicioProductos = {
   async obtenerProductos(): Promise<Producto[]> {
-    return almacenProductos;
+    const { data, error } = await requerirSupabase()
+      .from('productos')
+      .select(SELECT_PRODUCTO)
+      .order('fecha_alta', { ascending: false });
+
+    if (error) throw new Error(`No se pudieron cargar los productos: ${error.message}`);
+    return (data ?? []).map((fila) => mapearProducto(fila as unknown as FilaProductoSupabase));
   },
 
   async obtenerProductoPorId(id: string): Promise<Producto | undefined> {
-    return almacenProductos.find((producto) => producto.id === id);
+    return obtenerProductoPorIdInterno(id);
   },
 
   async obtenerNovedades(limite = 4): Promise<Producto[]> {
-    return almacenProductos.filter((producto) => producto.esNovedad).slice(0, limite);
+    const { data, error } = await requerirSupabase()
+      .from('productos')
+      .select(SELECT_PRODUCTO)
+      .eq('es_novedad', true)
+      .order('fecha_alta', { ascending: false })
+      .limit(limite);
+
+    if (error) throw new Error(`No se pudieron cargar las novedades: ${error.message}`);
+    return (data ?? []).map((fila) => mapearProducto(fila as unknown as FilaProductoSupabase));
   },
 
   async obtenerCategorias(): Promise<Categoria[]> {
-    return categorias;
+    const cliente = requerirSupabase();
+    const [{ data: filasCategorias, error: errorCategorias }, { data: filasProductos, error: errorProductos }] =
+      await Promise.all([
+        cliente.from('categorias').select('id, nombre, subcategorias'),
+        cliente.from('productos').select('categoria_id'),
+      ]);
+
+    if (errorCategorias) throw new Error(`No se pudieron cargar las categorías: ${errorCategorias.message}`);
+    if (errorProductos) throw new Error(`No se pudo calcular el conteo por categoría: ${errorProductos.message}`);
+
+    // `categorias.conteo_articulos` no existe en la base: se calcula aquí a
+    // partir de `productos.categoria_id` (indicado explícitamente por Yeiner).
+    const conteos = new Map<string, number>();
+    for (const fila of filasProductos ?? []) {
+      const clave = (fila as { categoria_id: string }).categoria_id;
+      conteos.set(clave, (conteos.get(clave) ?? 0) + 1);
+    }
+
+    return (filasCategorias ?? []).map((fila) => {
+      const tipada = fila as { id: string; nombre: string; subcategorias: string[] | null };
+      return {
+        id: tipada.id,
+        nombre: tipada.nombre,
+        subcategorias: tipada.subcategorias ?? [],
+        conteoArticulos: conteos.get(tipada.id) ?? 0,
+      };
+    });
   },
 
   async obtenerCategoriaPorId(id: string): Promise<Categoria | undefined> {
+    const categorias = await servicioProductos.obtenerCategorias();
     return categorias.find((categoria) => categoria.id === id);
   },
 
   async obtenerColores(): Promise<ColorProducto[]> {
-    return colores;
+    const { data, error } = await requerirSupabase().from('colores').select('id, nombre, hex');
+    if (error) throw new Error(`No se pudieron cargar los colores: ${error.message}`);
+    return (data ?? []) as ColorProducto[];
   },
 
-  // --- Admin: CRUD de productos/variantes (Yeiner) ---
+  // --- Admin: CRUD de productos/variantes (Yeiner) — Supabase real ---
+  // El cache en memoria que existía en esta fase anterior se eliminó: esto ya
+  // escribe de verdad en `productos` / `variantes_producto` / `imagenes_producto`.
 
   async crearProducto(
     datos: DatosProductoGenerales & { variantes: VarianteProducto[]; imagenes: string[] },
   ): Promise<Producto> {
-    const categoria = categorias.find((c) => c.id === datos.categoriaId);
-    const nuevo: Producto = {
-      ...datos,
-      id: generarId(datos.nombre),
-      categoriaNombre: categoria?.nombre.toUpperCase() ?? '',
-      colores: coloresDeVariantes(datos.variantes),
+    const cliente = requerirSupabase();
+    const id = generarIdProducto(datos.nombre);
+
+    const { error: errorProducto } = await cliente.from('productos').insert({
+      id,
+      sku: datos.sku,
+      nombre: datos.nombre,
+      categoria_id: datos.categoriaId,
+      precio: datos.precio,
+      precio_anterior: datos.precioAnterior ?? null,
+      descripcion: datos.descripcion,
+      composicion: datos.composicion,
+      confeccion: datos.confeccion,
+      origen: datos.origen,
+      etiquetas: datos.etiquetas,
+      es_novedad: datos.esNovedad,
+      popularidad_30d: 0,
+      fecha_alta: new Date().toISOString().slice(0, 10),
       activo: true,
-      popularidad30d: 0,
-      fechaAlta: new Date().toISOString().slice(0, 10),
-    };
-    almacenProductos = [nuevo, ...almacenProductos];
-    return nuevo;
+    });
+    if (errorProducto) {
+      if (errorProducto.code === '23505') {
+        throw new Error(`Ya existe un producto con el SKU "${datos.sku}".`);
+      }
+      throw new Error(`No se pudo crear el producto: ${errorProducto.message}`);
+    }
+
+    if (datos.variantes.length > 0) {
+      const { error: errorVariantes } = await cliente.from('variantes_producto').insert(
+        datos.variantes.map((v) => ({ producto_id: id, talla: v.talla, color_id: v.colorId, stock: v.stock })),
+      );
+      if (errorVariantes) {
+        throw new Error(`El producto se creó, pero no se pudieron guardar las variantes: ${errorVariantes.message}`);
+      }
+    }
+
+    if (datos.imagenes.length > 0) {
+      const { error: errorImagenes } = await cliente.from('imagenes_producto').insert(
+        datos.imagenes.map((url, orden) => ({ producto_id: id, url, orden })),
+      );
+      if (errorImagenes) {
+        throw new Error(`El producto se creó, pero no se pudieron guardar las fotos: ${errorImagenes.message}`);
+      }
+    }
+
+    const creado = await obtenerProductoPorIdInterno(id);
+    if (!creado) throw new Error('El producto se creó pero no se pudo volver a leer.');
+    return creado;
   },
 
   async actualizarProducto(id: string, datos: DatosProductoGenerales): Promise<Producto> {
-    const existente = requerirProducto(id);
-    const categoria = categorias.find((c) => c.id === datos.categoriaId);
-    const actualizado: Producto = {
-      ...existente,
-      ...datos,
-      categoriaNombre: categoria?.nombre.toUpperCase() ?? existente.categoriaNombre,
-    };
-    almacenProductos = almacenProductos.map((p) => (p.id === id ? actualizado : p));
+    const cliente = requerirSupabase();
+    const { error } = await cliente
+      .from('productos')
+      .update({
+        nombre: datos.nombre,
+        categoria_id: datos.categoriaId,
+        precio: datos.precio,
+        precio_anterior: datos.precioAnterior ?? null,
+        descripcion: datos.descripcion,
+        composicion: datos.composicion,
+        confeccion: datos.confeccion,
+        origen: datos.origen,
+        etiquetas: datos.etiquetas,
+        es_novedad: datos.esNovedad,
+      })
+      .eq('id', id);
+    if (error) throw new Error(`No se pudo actualizar el producto: ${error.message}`);
+
+    const actualizado = await obtenerProductoPorIdInterno(id);
+    if (!actualizado) throw new Error(`El producto "${id}" no existe.`);
     return actualizado;
   },
 
+  // Reconcilia por (talla, color) en vez de borrar todo: una vez que existen
+  // pedidos, `items_pedido.variante_id` puede apuntar a una fila de
+  // `variantes_producto` — borrarla y reinsertarla con otro id rompería esa
+  // referencia histórica. Cada cambio de stock deja su propio movimiento en
+  // `movimientos_stock` (ingreso al crear una combinación nueva, ajuste al
+  // cambiar el stock de una que ya existía).
   async actualizarVariantesEImagenes(
     id: string,
     variantes: VarianteProducto[],
     imagenes: string[],
   ): Promise<Producto> {
-    const existente = requerirProducto(id);
-    const actualizado: Producto = {
-      ...existente,
-      variantes,
-      imagenes,
-      colores: coloresDeVariantes(variantes),
-    };
-    almacenProductos = almacenProductos.map((p) => (p.id === id ? actualizado : p));
+    const cliente = requerirSupabase();
+    const { data: usuarioActual } = await cliente.auth.getUser();
+    const creadoPor = usuarioActual.user?.id ?? null;
+
+    const { data: existentes, error: errorLectura } = await cliente
+      .from('variantes_producto')
+      .select('id, talla, color_id, stock')
+      .eq('producto_id', id);
+    if (errorLectura) throw new Error(`No se pudieron leer las variantes actuales: ${errorLectura.message}`);
+
+    const clave = (talla: string, colorId: string) => `${talla}__${colorId}`;
+    const mapaExistentes = new Map(
+      ((existentes ?? []) as { id: string; talla: string; color_id: string; stock: number }[]).map((v) => [
+        clave(v.talla, v.color_id),
+        v,
+      ]),
+    );
+    const clavesNuevas = new Set(variantes.map((v) => clave(v.talla, v.colorId)));
+    const movimientos: { variante_id: string; tipo: 'ingreso' | 'ajuste'; cantidad: number; creado_por: string | null }[] = [];
+
+    for (const variante of variantes) {
+      const existente = mapaExistentes.get(clave(variante.talla, variante.colorId));
+      if (!existente) {
+        const { data: creada, error } = await cliente
+          .from('variantes_producto')
+          .insert({ producto_id: id, talla: variante.talla, color_id: variante.colorId, stock: variante.stock })
+          .select('id')
+          .single();
+        if (error) throw new Error(`No se pudo crear la variante ${variante.talla}/${variante.colorId}: ${error.message}`);
+        if (variante.stock > 0) {
+          movimientos.push({ variante_id: (creada as { id: string }).id, tipo: 'ingreso', cantidad: variante.stock, creado_por: creadoPor });
+        }
+      } else if (existente.stock !== variante.stock) {
+        const { error } = await cliente
+          .from('variantes_producto')
+          .update({ stock: variante.stock })
+          .eq('id', existente.id);
+        if (error) throw new Error(`No se pudo actualizar el stock de ${variante.talla}/${variante.colorId}: ${error.message}`);
+        movimientos.push({
+          variante_id: existente.id,
+          tipo: 'ajuste',
+          cantidad: variante.stock - existente.stock,
+          creado_por: creadoPor,
+        });
+      }
+    }
+
+    const idsAEliminar = [...mapaExistentes.entries()]
+      .filter(([claveExistente]) => !clavesNuevas.has(claveExistente))
+      .map(([, v]) => v.id);
+    if (idsAEliminar.length > 0) {
+      const { error: errorEliminar } = await cliente.from('variantes_producto').delete().in('id', idsAEliminar);
+      if (errorEliminar) {
+        throw new Error(
+          `No se pudieron quitar algunas variantes (puede que ya tengan pedidos asociados): ${errorEliminar.message}`,
+        );
+      }
+    }
+
+    if (movimientos.length > 0) {
+      const { error: errorMovimientos } = await cliente.from('movimientos_stock').insert(
+        movimientos.map((m) => ({ variante_id: m.variante_id, tipo: m.tipo, cantidad: m.cantidad, creado_por: m.creado_por })),
+      );
+      // No se aborta la edición por esto: el stock ya quedó bien: solo se
+      // avisa que la bitácora de movimientos no se pudo registrar.
+      if (errorMovimientos) console.error('No se pudo registrar el movimiento de stock.', errorMovimientos);
+    }
+
+    const { error: errorBorrarImagenes } = await cliente
+      .from('imagenes_producto')
+      .delete()
+      .eq('producto_id', id);
+    if (errorBorrarImagenes) {
+      throw new Error(`No se pudieron actualizar las fotos: ${errorBorrarImagenes.message}`);
+    }
+    if (imagenes.length > 0) {
+      const { error: errorImagenes } = await cliente.from('imagenes_producto').insert(
+        imagenes.map((url, orden) => ({ producto_id: id, url, orden })),
+      );
+      if (errorImagenes) throw new Error(`No se pudieron guardar las fotos: ${errorImagenes.message}`);
+    }
+
+    const actualizado = await obtenerProductoPorIdInterno(id);
+    if (!actualizado) throw new Error(`El producto "${id}" no existe.`);
     return actualizado;
   },
 
   async alternarActivo(id: string): Promise<Producto> {
-    const existente = requerirProducto(id);
-    const actualizado: Producto = { ...existente, activo: !existente.activo };
-    almacenProductos = almacenProductos.map((p) => (p.id === id ? actualizado : p));
+    const actual = await obtenerProductoPorIdInterno(id);
+    if (!actual) throw new Error(`El producto "${id}" no existe.`);
+
+    const cliente = requerirSupabase();
+    const { error } = await cliente.from('productos').update({ activo: !actual.activo }).eq('id', id);
+    if (error) throw new Error(`No se pudo cambiar el estado del producto: ${error.message}`);
+
+    const actualizado = await obtenerProductoPorIdInterno(id);
+    if (!actualizado) throw new Error(`El producto "${id}" no existe.`);
     return actualizado;
   },
 
-  // --- Pedidos: descontar stock al confirmar la compra ----
-
-  // Todo o nada: si una variante no alcanza, no se descuenta ninguna.
-  async descontarStock(items: ItemCarrito[]): Promise<void> {
-    for (const item of items) {
-      const variante = buscarVariantePorId(requerirProducto(item.producto.id), item.varianteId);
-      if (!variante || variante.stock < item.cantidad) {
-        throw new Error(`Ya no hay stock suficiente de ${item.producto.nombre}.`);
-      }
-    }
-
-    for (const item of items) {
-      const producto = requerirProducto(item.producto.id);
-      const variantes = producto.variantes.map((variante) =>
-        variante.id === item.varianteId
-          ? { ...variante, stock: variante.stock - item.cantidad }
-          : variante,
-      );
-      almacenProductos = almacenProductos.map((p) => (p.id === producto.id ? { ...producto, variantes } : p));
-    }
-  },
+  // El descuento de stock al confirmar una compra ya NO vive aquí: lo hace
+  // por completo la RPC `confirmar_compra` (validar stock, crear pedido,
+  // descontar stock, registrar movimiento, crear pago, limpiar carrito, todo
+  // en una sola transacción). Ver servicioPedidos.confirmarCompra().
 };

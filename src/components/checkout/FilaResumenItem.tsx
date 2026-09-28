@@ -17,7 +17,7 @@ export function FilaResumenItem({ item }: { item: ItemCarrito }) {
   return (
     <View style={styles.contenedor}>
       <View style={styles.miniatura}>
-        <MarcadorImagenProducto llenar sinEtiqueta />
+        <MarcadorImagenProducto uri={producto.imagenes[0]} llenar sinEtiqueta />
       </View>
       <View style={styles.info}>
         <Text style={styles.nombre} numberOfLines={2}>

@@ -30,10 +30,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [listo, setListo] = useState(false);
 
   useEffect(() => {
-    servicioAutenticacion.obtenerUsuarioActual().then((usuarioActual) => {
-      setUsuario(usuarioActual);
-      setListo(true);
-    });
+    let cancelado = false;
+    servicioAutenticacion
+      .obtenerUsuarioActual()
+      .then((usuarioActual) => {
+        if (!cancelado) setUsuario(usuarioActual);
+      })
+      .catch((err) => {
+        // No debe tumbar el arranque de la app: sin sesión restaurada, se
+        // trata igual que "no hay usuario" (va a login), pero el error
+        // queda visible en consola, no escondido.
+        console.error('AuthContext: no se pudo restaurar la sesión.', err);
+      })
+      .finally(() => {
+        if (!cancelado) setListo(true);
+      });
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   const iniciarSesion = useCallback(async (email: string, contrasena: string) => {

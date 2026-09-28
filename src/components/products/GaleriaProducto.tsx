@@ -50,6 +50,7 @@ export function GaleriaProducto({
         {Array.from({ length: cantidad }).map((_, indice) => (
           <MarcadorImagenProducto
             key={indice}
+            uri={imagenes[indice]}
             relacion={RELACION_IMAGEN.producto}
             radio={0}
             style={{ width: ANCHO }}

@@ -8,10 +8,18 @@ export function useDirecciones() {
   const { direccionSeleccionadaId, seleccionarDireccion } = useSeleccionCheckout();
   const [direcciones, setDirecciones] = useState<Direccion[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const recargar = useCallback(async () => {
-    setDirecciones(await servicioDirecciones.obtenerDirecciones());
-    setCargando(false);
+    setCargando(true);
+    setError(null);
+    try {
+      setDirecciones(await servicioDirecciones.obtenerDirecciones());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar las direcciones.');
+    } finally {
+      setCargando(false);
+    }
   }, []);
 
   useFocusEffect(
@@ -38,6 +46,14 @@ export function useDirecciones() {
     [recargar],
   );
 
+  const eliminar = useCallback(
+    async (id: string) => {
+      await servicioDirecciones.eliminarDireccion(id);
+      await recargar();
+    },
+    [recargar],
+  );
+
   // Dirección efectiva: la elegida, si no la predeterminada, si no la primera.
   const direccionSeleccionada = useMemo<Direccion | null>(
     () =>
@@ -51,9 +67,11 @@ export function useDirecciones() {
   return {
     direcciones,
     cargando,
+    error,
     direccionSeleccionada,
     seleccionarDireccion,
     crear,
     actualizar,
+    eliminar,
   };
 }

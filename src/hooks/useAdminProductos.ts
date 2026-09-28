@@ -10,19 +10,27 @@ export function useAdminProductos() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [categoriaId, setCategoriaId] = useState('todas');
   const [estado, setEstado] = useState<FiltroEstado>('todos');
   const [soloStockBajo, setSoloStockBajo] = useState(false);
 
   const recargar = useCallback(async () => {
-    const [productosCargados, categoriasCargadas] = await Promise.all([
-      servicioProductos.obtenerProductos(),
-      servicioProductos.obtenerCategorias(),
-    ]);
-    setProductos(productosCargados);
-    setCategorias(categoriasCargadas);
-    setCargando(false);
+    setCargando(true);
+    setError(null);
+    try {
+      const [productosCargados, categoriasCargadas] = await Promise.all([
+        servicioProductos.obtenerProductos(),
+        servicioProductos.obtenerCategorias(),
+      ]);
+      setProductos(productosCargados);
+      setCategorias(categoriasCargadas);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los productos.');
+    } finally {
+      setCargando(false);
+    }
   }, []);
 
   useFocusEffect(
@@ -62,6 +70,7 @@ export function useAdminProductos() {
     totalSinFiltrar: productos.length,
     categorias,
     cargando,
+    error,
     busqueda,
     setBusqueda,
     categoriaId,

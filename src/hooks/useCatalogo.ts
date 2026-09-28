@@ -34,16 +34,25 @@ export function useCatalogo({ categoriaInicial = 'todo' }: OpcionesUseCatalogo =
 
   const [todos, setTodos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelado = false;
     setCargando(true);
-    servicioProductos.obtenerProductos().then((productos) => {
-      if (!cancelado) {
-        setTodos(productos);
-        setCargando(false);
-      }
-    });
+    setError(null);
+    servicioProductos
+      .obtenerProductos()
+      .then((productos) => {
+        if (!cancelado) setTodos(productos);
+      })
+      .catch((err) => {
+        if (!cancelado) {
+          setError(err instanceof Error ? err.message : 'No se pudieron cargar los productos.');
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setCargando(false);
+      });
     return () => {
       cancelado = true;
     };
@@ -109,5 +118,6 @@ export function useCatalogo({ categoriaInicial = 'todo' }: OpcionesUseCatalogo =
     hayMas,
     cargarMas: () => setPagina((actual) => actual + 1),
     cargando,
+    error,
   };
 }

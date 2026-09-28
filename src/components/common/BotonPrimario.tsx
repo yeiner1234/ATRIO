@@ -6,8 +6,8 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { COLORS } from '@/constants/colors';
 import { MEDIDAS, RADIO, TIPOGRAFIA } from '@/constants/theme';
+import { useTema } from '@/hooks/useTema';
 
 type VarianteBoton = 'solido' | 'contorno' | 'claro';
 
@@ -30,8 +30,9 @@ export function BotonPrimario({
   altura = 54,
   style,
 }: PropiedadesBotonPrimario) {
+  const { colores } = useTema();
   const inactivo = deshabilitado || cargando;
-  const colorTexto = variante === 'solido' ? COLORS.papel : COLORS.tinta;
+  const colorTexto = variante === 'solido' ? colores.papel : colores.tinta;
 
   return (
     <Pressable
@@ -41,9 +42,9 @@ export function BotonPrimario({
       style={({ pressed }) => [
         styles.base,
         { height: altura },
-        variante === 'solido' && styles.solido,
-        variante === 'contorno' && styles.contorno,
-        variante === 'claro' && styles.claro,
+        variante === 'solido' && { backgroundColor: colores.tinta },
+        variante === 'contorno' && { borderWidth: 1, borderColor: colores.tinta },
+        variante === 'claro' && { backgroundColor: colores.papel },
         pressed && !inactivo && styles.presionado,
         inactivo && styles.inactivo,
         style,
@@ -66,9 +67,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
-  solido: { backgroundColor: COLORS.tinta },
-  contorno: { borderWidth: 1, borderColor: COLORS.tinta },
-  claro: { backgroundColor: COLORS.papel },
   presionado: { opacity: 0.85 },
   inactivo: { opacity: 0.4 },
   texto: {

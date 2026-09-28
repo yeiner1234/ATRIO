@@ -10,6 +10,7 @@ interface PropiedadesTarjetaDireccion {
   mostrarSeleccion?: boolean;
   alPresionar?: () => void;
   alEditar?: () => void;
+  alEliminar?: () => void;
 }
 
 export function TarjetaDireccion({
@@ -18,6 +19,7 @@ export function TarjetaDireccion({
   mostrarSeleccion = false,
   alPresionar,
   alEditar,
+  alEliminar,
 }: PropiedadesTarjetaDireccion) {
   return (
     <View style={[styles.contenedor, seleccionada && styles.seleccionada]}>
@@ -56,6 +58,17 @@ export function TarjetaDireccion({
           accessibilityLabel="Editar dirección"
         >
           <Text style={styles.editarTexto}>Editar</Text>
+        </Pressable>
+      ) : null}
+      {alEliminar ? (
+        <Pressable
+          onPress={alEliminar}
+          hitSlop={8}
+          style={styles.editar}
+          accessibilityRole="button"
+          accessibilityLabel="Eliminar dirección"
+        >
+          <Ionicons name="trash-outline" size={16} color={COLORS.arcilla} />
         </Pressable>
       ) : null}
     </View>

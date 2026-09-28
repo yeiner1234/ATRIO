@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormularioProducto } from '@/components/admin/FormularioProducto';
-import { BotonCerrarSesionAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
+import { AccionesAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
 import { MEDIDAS, ESPACIO } from '@/constants/theme';
 import { useCategorias } from '@/hooks/useCategorias';
@@ -14,7 +14,7 @@ export default function PantallaNuevoProducto() {
   return (
     <View style={[styles.pantalla, { backgroundColor: colores.papel }]}>
       <SafeAreaView edges={['top']} style={styles.barraSuperior}>
-        <BotonCerrarSesionAdmin />
+        <AccionesAdmin />
       </SafeAreaView>
       <NavegacionAdmin />
       <EncabezadoPantalla titulo="Nuevo producto" conBotonVolver />

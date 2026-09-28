@@ -8,7 +8,11 @@ export const COLORS_OSCURO: Record<keyof typeof COLORS, string> = {
   tinta: '#F5F3EF',
   arcilla: '#E8875A',
   lino: '#232219',
-  blanco: '#F5F3EF',
+  // Superficie "elevada" (tarjetas, inputs) — debe ser MÁS clara que el fondo
+  // pero seguir siendo oscura. Antes valía lo mismo que `tinta` (el color del
+  // texto), así que cualquier campo/tarjeta con fondo `blanco` + texto `tinta`
+  // quedaba invisible (texto y fondo del mismo color). Bug real, corregido.
+  blanco: '#2C2A1D',
 
   textoSecundario: `rgba(${TEXTO}, 0.55)`,
   borde: `rgba(${TEXTO}, 0.14)`,

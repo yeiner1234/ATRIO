@@ -28,7 +28,9 @@ export default function PantallaCheckout() {
     problemas,
     puedeContinuar,
     validando,
+    error,
     continuarAPago,
+    reintentarValidacion,
   } = useCheckout();
 
   // El retiro en tienda no necesita dirección; antes de elegir método, la mostramos igual.
@@ -105,6 +107,15 @@ export default function PantallaCheckout() {
                 • {problema.mensaje}
               </Text>
             ))}
+          </View>
+        ) : null}
+
+        {error ? (
+          <View style={styles.avisos}>
+            <Text style={styles.aviso}>• {error}</Text>
+            <Pressable onPress={reintentarValidacion} hitSlop={8} accessibilityRole="button">
+              <Text style={styles.enlace}>REINTENTAR</Text>
+            </Pressable>
           </View>
         ) : null}
       </ScrollView>

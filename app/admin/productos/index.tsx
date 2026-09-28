@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FilaProductoAdmin } from '@/components/admin/FilaProductoAdmin';
-import { BotonCerrarSesionAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
+import { AccionesAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
 import { CampoBusqueda } from '@/components/common/CampoBusqueda';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
 import { EstadoVacio } from '@/components/common/EstadoVacio';
@@ -39,7 +39,7 @@ export default function PantallaListaProductosAdmin() {
   return (
     <View style={[styles.pantalla, { backgroundColor: colores.papel }]}>
       <SafeAreaView edges={['top']} style={styles.barraSuperior}>
-        <BotonCerrarSesionAdmin />
+        <AccionesAdmin />
       </SafeAreaView>
       <NavegacionAdmin />
 

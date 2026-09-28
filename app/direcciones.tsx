@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
 import { EstadoVacio } from '@/components/common/EstadoVacio';
@@ -15,10 +15,24 @@ import type { DatosDireccion, Direccion } from '@/types';
 type Modo = { tipo: 'lista' } | { tipo: 'crear' } | { tipo: 'editar'; direccion: Direccion };
 
 export default function PantallaDirecciones() {
-  const { direcciones, cargando, direccionSeleccionada, seleccionarDireccion, crear, actualizar } =
+  const { direcciones, cargando, error, direccionSeleccionada, seleccionarDireccion, crear, actualizar, eliminar } =
     useDirecciones();
   const [modo, setModo] = useState<Modo>({ tipo: 'lista' });
   const [guardando, setGuardando] = useState(false);
+
+  const confirmarEliminar = (direccion: Direccion) => {
+    Alert.alert('Eliminar dirección', `¿Eliminar "${direccion.etiqueta ?? direccion.direccion}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () =>
+          eliminar(direccion.id).catch(() =>
+            Alert.alert('No se pudo eliminar', 'Inténtalo de nuevo.'),
+          ),
+      },
+    ]);
+  };
 
   const volverALista = () => setModo({ tipo: 'lista' });
 
@@ -71,13 +85,19 @@ export default function PantallaDirecciones() {
     );
   }
 
-  const sinDirecciones = !cargando && direcciones.length === 0;
+  const sinDirecciones = !cargando && !error && direcciones.length === 0;
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['top']}>
       <EncabezadoPantalla titulo="Direcciones" conBotonVolver />
 
-      {sinDirecciones ? (
+      {error ? (
+        <EstadoVacio
+          icono="alert-circle-outline"
+          titulo="No se pudieron cargar tus direcciones"
+          descripcion={error}
+        />
+      ) : sinDirecciones ? (
         <EstadoVacio
           titulo="Aún no tienes direcciones"
           descripcion="Agrega una dirección para recibir tus pedidos."
@@ -98,6 +118,7 @@ export default function PantallaDirecciones() {
                   router.back();
                 }}
                 alEditar={() => setModo({ tipo: 'editar', direccion })}
+                alEliminar={() => confirmarEliminar(direccion)}
               />
             ))}
           </ScrollView>

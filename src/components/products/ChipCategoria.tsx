@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { COLORS } from '@/constants/colors';
 import { MEDIDAS, RADIO, TIPOGRAFIA } from '@/constants/theme';
+import { useTema } from '@/hooks/useTema';
 
 interface PropiedadesChipCategoria {
   texto: string;
@@ -9,16 +9,21 @@ interface PropiedadesChipCategoria {
 }
 
 export function ChipCategoria({ texto, activo, alPresionar }: PropiedadesChipCategoria) {
+  const { colores } = useTema();
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: activo }}
       onPress={alPresionar}
-      style={[styles.chip, activo ? styles.activo : styles.inactivo]}
+      style={[
+        styles.chip,
+        activo
+          ? { backgroundColor: colores.tinta }
+          : { backgroundColor: colores.lino, borderWidth: 1, borderColor: colores.borde },
+      ]}
     >
-      <Text style={[styles.texto, activo ? styles.textoActivo : styles.textoInactivo]}>
-        {texto}
-      </Text>
+      <Text style={[styles.texto, { color: activo ? colores.papel : colores.tinta }]}>{texto}</Text>
     </Pressable>
   );
 }
@@ -32,9 +37,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activo: { backgroundColor: COLORS.tinta },
-  inactivo: { backgroundColor: COLORS.lino, borderWidth: 1, borderColor: COLORS.borde },
   texto: { fontFamily: TIPOGRAFIA.etiqueta, fontSize: 12 },
-  textoActivo: { color: COLORS.papel },
-  textoInactivo: { color: COLORS.tinta },
 });

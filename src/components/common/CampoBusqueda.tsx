@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, TextInput, View } from 'react-native';
-import { COLORS } from '@/constants/colors';
 import { ESPACIO, MEDIDAS, RADIO, TIPOGRAFIA } from '@/constants/theme';
+import { useTema } from '@/hooks/useTema';
 
 interface PropiedadesCampoBusqueda {
   valor: string;
@@ -10,15 +10,17 @@ interface PropiedadesCampoBusqueda {
 }
 
 export function CampoBusqueda({ valor, alCambiar, placeholder }: PropiedadesCampoBusqueda) {
+  const { colores } = useTema();
+
   return (
-    <View style={styles.contenedor}>
-      <Ionicons name="search" size={18} color={COLORS.tinta45} />
+    <View style={[styles.contenedor, { backgroundColor: colores.blanco, borderColor: colores.borde }]}>
+      <Ionicons name="search" size={18} color={colores.tinta45} />
       <TextInput
-        style={styles.entrada}
+        style={[styles.entrada, { color: colores.tinta }]}
         value={valor}
         onChangeText={alCambiar}
         placeholder={placeholder}
-        placeholderTextColor={COLORS.tinta45}
+        placeholderTextColor={colores.tinta45}
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"
@@ -35,16 +37,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: ESPACIO.sm,
     paddingHorizontal: ESPACIO.md,
-    backgroundColor: COLORS.blanco,
     borderWidth: 1,
-    borderColor: COLORS.borde,
     borderRadius: RADIO.imagen,
   },
   entrada: {
     flex: 1,
     fontFamily: TIPOGRAFIA.cuerpo,
     fontSize: 14,
-    color: COLORS.tinta,
     paddingVertical: 0,
   },
 });

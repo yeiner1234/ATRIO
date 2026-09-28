@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
-import { ErrorCorreoRegistrado } from '@/services/servicioAutenticacion';
+import { ErrorConfirmacionPendiente, ErrorCorreoRegistrado } from '@/services/servicioAutenticacion';
 
 const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -48,9 +48,13 @@ export default function PantallaRegistro() {
       await registrar({ nombre: nombreLimpio, email: emailLimpio, celular: celularLimpio, contrasena });
       router.replace('/(tabs)');
     } catch (error) {
-      setMensaje(error instanceof ErrorCorreoRegistrado
-        ? 'Ya existe una cuenta con ese correo.'
-        : 'No se pudo crear la cuenta. Inténtalo de nuevo.');
+      if (error instanceof ErrorConfirmacionPendiente) {
+        setMensaje('Cuenta creada. Revisa tu correo y confirma tu cuenta antes de iniciar sesión.');
+      } else if (error instanceof ErrorCorreoRegistrado) {
+        setMensaje('Ya existe una cuenta con ese correo.');
+      } else {
+        setMensaje('No se pudo crear la cuenta. Inténtalo de nuevo.');
+      }
     } finally {
       setCargando(false);
     }

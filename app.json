@@ -26,7 +26,13 @@
       "expo-secure-store",
       "expo-font",
       "expo-notifications",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ATRIO necesita acceder a tus fotos para que elijas la imagen de un producto."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

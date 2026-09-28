@@ -12,15 +12,30 @@ export function useDetalleProducto(id: string) {
   const [colorSeleccionado, setColorSeleccionado] = useState<string | null>(null);
   const [errorSeleccion, setErrorSeleccion] = useState(false);
 
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelado = false;
     setProducto(undefined);
     setTallaSeleccionada(null);
     setColorSeleccionado(null);
     setErrorSeleccion(false);
-    servicioProductos.obtenerProductoPorId(id).then((encontrado) => {
-      if (!cancelado) setProducto(encontrado);
-    });
+    setCargando(true);
+    setError(null);
+    servicioProductos
+      .obtenerProductoPorId(id)
+      .then((encontrado) => {
+        if (!cancelado) setProducto(encontrado);
+      })
+      .catch((err) => {
+        if (!cancelado) {
+          setError(err instanceof Error ? err.message : 'No se pudo cargar el producto.');
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setCargando(false);
+      });
     return () => {
       cancelado = true;
     };
@@ -69,6 +84,8 @@ export function useDetalleProducto(id: string) {
 
   return {
     producto,
+    cargando,
+    error,
     tallaSeleccionada,
     seleccionarTalla,
     tallasDisponibles,

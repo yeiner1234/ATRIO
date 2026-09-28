@@ -20,6 +20,7 @@ export function useCheckout() {
 
   const [problemasStock, setProblemasStock] = useState<ProblemaCheckout[]>([]);
   const [validando, setValidando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const metodoEntrega = useMemo(
     () => metodosEntrega.find((metodo) => metodo.id === metodoEntregaId) ?? null,
@@ -45,14 +46,36 @@ export function useCheckout() {
   useEffect(() => {
     let cancelado = false;
     setValidando(true);
-    validarStock().then((problemas) => {
-      if (cancelado) return;
-      setProblemasStock(problemas);
-      setValidando(false);
-    });
+    setError(null);
+    validarStock()
+      .then((problemas) => {
+        if (!cancelado) setProblemasStock(problemas);
+      })
+      .catch((err) => {
+        if (!cancelado) {
+          setError(err instanceof Error ? err.message : 'No se pudo validar el stock.');
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setValidando(false);
+      });
     return () => {
       cancelado = true;
     };
+  }, [validarStock]);
+
+  // Reintento manual: si la validación inicial falló, el botón de abajo no se
+  // queda bloqueado para siempre — esto la vuelve a correr.
+  const reintentarValidacion = useCallback(async () => {
+    setValidando(true);
+    setError(null);
+    try {
+      setProblemasStock(await validarStock());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo validar el stock.');
+    } finally {
+      setValidando(false);
+    }
   }, [validarStock]);
 
   const problemasLocales = useMemo(
@@ -68,7 +91,7 @@ export function useCheckout() {
     [problemasLocales, problemasStock],
   );
 
-  const puedeContinuar = problemas.length === 0 && !validando && !cargandoDirecciones;
+  const puedeContinuar = problemas.length === 0 && !validando && !cargandoDirecciones && !error;
 
   const datosPago = useMemo<DatosPago | null>(() => {
     if (!puedeContinuar || !metodoEntrega) return null;
@@ -83,10 +106,16 @@ export function useCheckout() {
   const continuarAPago = useCallback(async () => {
     if (validando || problemasLocales.length > 0) return;
     setValidando(true);
-    const frescos = await validarStock();
-    setProblemasStock(frescos);
-    setValidando(false);
-    if (frescos.length === 0) router.push('/pago');
+    setError(null);
+    try {
+      const frescos = await validarStock();
+      setProblemasStock(frescos);
+      if (frescos.length === 0) router.push('/pago');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo validar el stock. Intenta de nuevo.');
+    } finally {
+      setValidando(false);
+    }
   }, [validando, problemasLocales, validarStock]);
 
   return {
@@ -99,8 +128,10 @@ export function useCheckout() {
     problemas,
     puedeContinuar,
     validando,
+    error,
     datosPago,
     continuarAPago,
+    reintentarValidacion,
     reiniciarCheckout,
   };
 }

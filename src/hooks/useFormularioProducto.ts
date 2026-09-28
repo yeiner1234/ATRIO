@@ -1,8 +1,8 @@
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { colores as paletaColores } from '@/data/colores';
+import { useEffect, useMemo, useState } from 'react';
 import { servicioProductos } from '@/services/servicioProductos';
-import type { DatosProductoGenerales, EtiquetaProducto, Producto, VarianteProducto } from '@/types';
+import type { ColorProducto, DatosProductoGenerales, EtiquetaProducto, Producto, VarianteProducto } from '@/types';
 
 export const TALLAS_DISPONIBLES = ['XS', 'S', 'M', 'L', 'XL'];
 const ETIQUETAS_DISPONIBLES: EtiquetaProducto[] = ['NUEVO', '-15%', 'ÚLTIMAS'];
@@ -47,6 +47,33 @@ export function useFormularioProducto(productoExistente?: Producto) {
   const [imagenes, setImagenes] = useState<string[]>(productoExistente?.imagenes ?? []);
   const [guardando, setGuardando] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
+  const [cargandoImagen, setCargandoImagen] = useState(false);
+  const [errorImagen, setErrorImagen] = useState<string | null>(null);
+  const [coloresDisponibles, setColoresDisponibles] = useState<ColorProducto[]>([]);
+  const [cargandoColores, setCargandoColores] = useState(true);
+
+  useEffect(() => {
+    let cancelado = false;
+    servicioProductos
+      .obtenerColores()
+      .then((colores) => {
+        if (!cancelado) setColoresDisponibles(colores);
+      })
+      .catch((err) => {
+        if (!cancelado) {
+          setErrorGuardado(
+            err instanceof Error ? err.message : 'No se pudieron cargar los colores disponibles.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoColores(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   const actualizarGeneral = <K extends keyof DatosProductoGenerales>(
     campo: K,
@@ -105,10 +132,31 @@ export function useFormularioProducto(productoExistente?: Producto) {
     return resultado;
   }, [tallasSeleccionadas, coloresSeleccionados, stockPorClave, productoExistente]);
 
-  const agregarImagen = (url: string) => {
-    const limpia = url.trim();
-    if (!limpia) return;
-    setImagenes((previo) => [...previo, limpia]);
+  // Selecciona una foto real de la galería del teléfono (expo-image-picker).
+  // Sin Supabase Storage conectado, se guarda la URI local del dispositivo:
+  // se ve bien en ESTE teléfono, pero no viaja a la nube todavía.
+  const agregarImagenDesdeGaleria = async () => {
+    setErrorImagen(null);
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      setErrorImagen('Necesitas permitir el acceso a tus fotos para elegir una imagen.');
+      return;
+    }
+    setCargandoImagen(true);
+    try {
+      const resultado = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.7,
+      });
+      if (resultado.canceled) return;
+      const uri = resultado.assets[0]?.uri;
+      if (uri) setImagenes((previo) => [...previo, uri]);
+    } catch {
+      setErrorImagen('No se pudo abrir la galería. Intenta de nuevo.');
+    } finally {
+      setCargandoImagen(false);
+    }
   };
 
   const eliminarImagen = (indice: number) => {
@@ -142,6 +190,7 @@ export function useFormularioProducto(productoExistente?: Producto) {
   const guardar = async (): Promise<boolean> => {
     if (!validar()) return false;
     setGuardando(true);
+    setErrorGuardado(null);
     try {
       if (productoExistente) {
         await servicioProductos.actualizarProducto(productoExistente.id, generales);
@@ -155,6 +204,9 @@ export function useFormularioProducto(productoExistente?: Producto) {
       }
       router.back();
       return true;
+    } catch (err) {
+      setErrorGuardado(err instanceof Error ? err.message : 'No se pudo guardar el producto.');
+      return false;
     } finally {
       setGuardando(false);
     }
@@ -169,17 +221,21 @@ export function useFormularioProducto(productoExistente?: Producto) {
     tallasDisponibles: TALLAS_DISPONIBLES,
     tallasSeleccionadas,
     alternarTalla,
-    coloresDisponibles: paletaColores,
+    coloresDisponibles,
+    cargandoColores,
     coloresSeleccionados,
     alternarColor,
     obtenerStock,
     cambiarStock,
     variantesActuales,
     imagenes,
-    agregarImagen,
+    agregarImagenDesdeGaleria,
+    cargandoImagen,
+    errorImagen,
     eliminarImagen,
     moverImagen,
     guardando,
+    errorGuardado,
     guardar,
     esEdicion: Boolean(productoExistente),
   };

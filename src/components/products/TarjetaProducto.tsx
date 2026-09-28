@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { COLORS } from '@/constants/colors';
 import { ESPACIO, TIPOGRAFIA } from '@/constants/theme';
+import { useTema } from '@/hooks/useTema';
 import type { EtiquetaProducto, Producto } from '@/types';
 import { formatearSoles } from '@/utils/moneda';
 import { MarcadorImagenProducto } from './MarcadorImagenProducto';
@@ -14,10 +14,6 @@ interface PropiedadesTarjetaProducto {
   mostrarEtiquetas?: boolean;
 }
 
-function colorEtiqueta(etiqueta: EtiquetaProducto): string {
-  return etiqueta === '-15%' ? COLORS.arcilla : COLORS.tinta;
-}
-
 export function TarjetaProducto({
   producto,
   alPresionar,
@@ -25,10 +21,13 @@ export function TarjetaProducto({
   alAlternarFavorito,
   mostrarEtiquetas = false,
 }: PropiedadesTarjetaProducto) {
+  const { colores } = useTema();
+  const colorEtiqueta = (etiqueta: EtiquetaProducto) => (etiqueta === '-15%' ? colores.arcilla : colores.tinta);
+
   return (
     <Pressable style={styles.contenedor} onPress={alPresionar} accessibilityRole="button">
       <View>
-        <MarcadorImagenProducto />
+        <MarcadorImagenProducto uri={producto.imagenes[0]} />
         {mostrarEtiquetas && producto.etiquetas.length > 0 ? (
           <View style={styles.etiquetas}>
             {producto.etiquetas.map((etiqueta) => (
@@ -36,7 +35,7 @@ export function TarjetaProducto({
                 key={etiqueta}
                 style={[styles.etiqueta, { backgroundColor: colorEtiqueta(etiqueta) }]}
               >
-                <Text style={styles.etiquetaTexto}>{etiqueta}</Text>
+                <Text style={[styles.etiquetaTexto, { color: colores.papel }]}>{etiqueta}</Text>
               </View>
             ))}
           </View>
@@ -44,7 +43,7 @@ export function TarjetaProducto({
       </View>
 
       <View style={styles.filaNombre}>
-        <Text style={styles.nombre} numberOfLines={1}>
+        <Text style={[styles.nombre, { color: colores.tinta }]} numberOfLines={1}>
           {producto.nombre}
         </Text>
         <Pressable
@@ -56,15 +55,17 @@ export function TarjetaProducto({
           <Ionicons
             name={esFavorito ? 'heart' : 'heart-outline'}
             size={18}
-            color={esFavorito ? COLORS.arcilla : COLORS.tinta}
+            color={esFavorito ? colores.arcilla : colores.tinta}
           />
         </Pressable>
       </View>
 
       <View style={styles.filaPrecio}>
-        <Text style={styles.precio}>{formatearSoles(producto.precio)}</Text>
+        <Text style={[styles.precio, { color: colores.tinta }]}>{formatearSoles(producto.precio)}</Text>
         {producto.precioAnterior ? (
-          <Text style={styles.precioAnterior}>{formatearSoles(producto.precioAnterior)}</Text>
+          <Text style={[styles.precioAnterior, { color: colores.tinta45 }]}>
+            {formatearSoles(producto.precioAnterior)}
+          </Text>
         ) : null}
       </View>
     </Pressable>
@@ -89,7 +90,6 @@ const styles = StyleSheet.create({
     fontFamily: TIPOGRAFIA.mono,
     fontSize: 9,
     letterSpacing: 0.5,
-    color: COLORS.papel,
   },
   filaNombre: {
     flexDirection: 'row',
@@ -102,7 +102,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: TIPOGRAFIA.cuerpo,
     fontSize: 12.5,
-    color: COLORS.tinta,
   },
   filaPrecio: {
     flexDirection: 'row',
@@ -112,12 +111,10 @@ const styles = StyleSheet.create({
   precio: {
     fontFamily: TIPOGRAFIA.monoFuerte,
     fontSize: 13,
-    color: COLORS.tinta,
   },
   precioAnterior: {
     fontFamily: TIPOGRAFIA.mono,
     fontSize: 11,
-    color: COLORS.tinta45,
     textDecorationLine: 'line-through',
   },
 });

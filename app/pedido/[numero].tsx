@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ResumenCarrito } from '@/components/cart/ResumenCarrito';
@@ -24,22 +24,47 @@ function TituloSeccion({ texto }: { texto: string }) {
 export default function PantallaDetallePedido() {
   const { numero } = useLocalSearchParams<{ numero: string }>();
   const { usuario } = useAuth();
-  const esPropietaria = usuario?.rol === 'propietaria';
+  const esAdministrador = usuario?.rol === 'administrador';
 
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const cargarPedido = useCallback(() => {
+    setCargando(true);
+    setError(null);
     servicioPedidos
       .obtenerPedido(numero)
       .then(setPedido)
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'No se pudo cargar el pedido.');
+      })
       .finally(() => setCargando(false));
   }, [numero]);
+
+  useEffect(() => {
+    cargarPedido();
+  }, [cargarPedido]);
 
   if (cargando) {
     return (
       <SafeAreaView style={[styles.pantalla, styles.centrado]}>
         <ActivityIndicator color={COLORS.tinta} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.pantalla} edges={['top']}>
+        <EncabezadoPantalla titulo="Pedido" conBotonVolver />
+        <EstadoVacio
+          icono="alert-circle-outline"
+          titulo="No se pudo cargar el pedido"
+          descripcion={error}
+          textoBoton="REINTENTAR"
+          alPresionarBoton={cargarPedido}
+        />
       </SafeAreaView>
     );
   }
@@ -77,7 +102,7 @@ export default function PantallaDetallePedido() {
           <Text style={styles.estado}>{nombreEstadoPedido[pedido.estado]}</Text>
         </View>
 
-        {esPropietaria ? (
+        {esAdministrador ? (
           <View style={styles.seccion}>
             <TituloSeccion texto="CAMBIAR ESTADO" />
             <View style={styles.opcionesEstado}>

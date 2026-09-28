@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
@@ -41,17 +41,27 @@ export default function PantallaPedidos() {
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const cargarPedidos = useCallback(() => {
     if (!usuario) {
       setCargando(false);
       return;
     }
+    setCargando(true);
+    setError(null);
     servicioPedidos
       .obtenerPedidosDeUsuario(usuario.id)
       .then(setPedidos)
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'No se pudieron cargar tus pedidos.');
+      })
       .finally(() => setCargando(false));
   }, [usuario]);
+
+  useEffect(() => {
+    cargarPedidos();
+  }, [cargarPedidos]);
 
   function contenido() {
     if (cargando) {
@@ -64,6 +74,17 @@ export default function PantallaPedidos() {
           titulo="Inicia sesión para ver tus pedidos"
           textoBoton="INICIAR SESIÓN"
           alPresionarBoton={() => router.push('/(auth)/login')}
+        />
+      );
+    }
+    if (error) {
+      return (
+        <EstadoVacio
+          icono="alert-circle-outline"
+          titulo="No se pudieron cargar tus pedidos"
+          descripcion={error}
+          textoBoton="REINTENTAR"
+          alPresionarBoton={cargarPedidos}
         />
       );
     }

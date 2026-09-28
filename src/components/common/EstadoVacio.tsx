@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
-import { COLORS } from '@/constants/colors';
 import { ESPACIO, MEDIDAS, TIPOGRAFIA } from '@/constants/theme';
+import { useTema } from '@/hooks/useTema';
 import { BotonPrimario } from './BotonPrimario';
 
 interface PropiedadesEstadoVacio {
@@ -19,11 +19,15 @@ export function EstadoVacio({
   textoBoton,
   alPresionarBoton,
 }: PropiedadesEstadoVacio) {
+  const { colores } = useTema();
+
   return (
     <View style={styles.contenedor}>
-      {icono ? <Ionicons name={icono} size={30} color={COLORS.tinta20} /> : null}
-      <Text style={styles.titulo}>{titulo}</Text>
-      {descripcion ? <Text style={styles.descripcion}>{descripcion}</Text> : null}
+      {icono ? <Ionicons name={icono} size={30} color={colores.tinta20} /> : null}
+      <Text style={[styles.titulo, { color: colores.tinta }]}>{titulo}</Text>
+      {descripcion ? (
+        <Text style={[styles.descripcion, { color: colores.textoSecundario }]}>{descripcion}</Text>
+      ) : null}
       {textoBoton && alPresionarBoton ? (
         <BotonPrimario
           texto={textoBoton}
@@ -48,14 +52,12 @@ const styles = StyleSheet.create({
   titulo: {
     fontFamily: TIPOGRAFIA.titulo,
     fontSize: 16,
-    color: COLORS.tinta,
     textAlign: 'center',
   },
   descripcion: {
     fontFamily: TIPOGRAFIA.cuerpo,
     fontSize: 13,
     lineHeight: 20,
-    color: COLORS.textoSecundario,
     textAlign: 'center',
     maxWidth: 260,
   },
