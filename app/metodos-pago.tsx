@@ -69,9 +69,15 @@ export default function PantallaMetodosPago() {
   async function guardar(datos: DatosTarjeta) {
     setGuardando(true);
     await servicioTarjetas.agregarTarjeta(datos);
-    await recargar();
     setGuardando(false);
     setAgregando(false);
+    // Igual que al elegir una tarjeta existente: si se llegó desde el pago,
+    // agregar la primera tarjeta también debe volver a Pago solo.
+    if (desdePago) {
+      router.back();
+      return;
+    }
+    await recargar();
   }
 
   async function elegir(id: string) {

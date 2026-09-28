@@ -6,6 +6,7 @@ export const CLAVES_ALMACENAMIENTO = {
   carrito: 'atrio.carrito',
   favoritos: 'atrio.favoritos',
   usuarioBiometria: 'atrio.auth.biometricUser',
+  sesionBloqueada: 'atrio.auth.sesionBloqueada',
   intentosInicioSesion: 'atrio.login.attempts',
   bloqueoInicioSesion: 'atrio.login.lockedUntil',
   preferenciasConfiguracion: 'atrio.configuracion.preferencias',

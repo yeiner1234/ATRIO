@@ -62,6 +62,10 @@ export const servicioAutenticacion = {
     });
     if (error || !data.user) throw new ErrorCredencialesInvalidas();
 
+    // Un login manual con correo/contraseña siempre es una sesión nueva de
+    // verdad: si había un bloqueo local de una cuenta anterior, ya no aplica.
+    await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.sesionBloqueada);
+
     const perfil = await obtenerPerfil(cliente, data.user.id);
     return construirUsuario(data.user.id, data.user.email ?? correo, perfil);
   },
@@ -87,6 +91,9 @@ export const servicioAutenticacion = {
     if (error || !data.session || data.session.user.id !== usuarioIdEsperado) {
       throw new ErrorBiometriaNoConfigurada();
     }
+
+    // Huella confirmada y sesión válida encontrada: ya se desbloqueó.
+    await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.sesionBloqueada);
 
     const perfil = await obtenerPerfil(cliente, data.session.user.id);
     return construirUsuario(data.session.user.id, data.session.user.email ?? '', perfil);
@@ -130,6 +137,16 @@ export const servicioAutenticacion = {
   },
 
   async obtenerUsuarioActual(): Promise<Usuario | null> {
+    // Con la sesión "bloqueada" (cerraste sesión pero la biometría sigue
+    // activa), el token de Supabase se deja vivo a propósito — pero esta
+    // función debe seguir devolviendo null, para que se muestre el login
+    // (con la huella lista para desbloquear) en vez de entrar directo sin
+    // pedir nada.
+    const bloqueada = await servicioAlmacenamiento.obtenerDato<boolean>(
+      CLAVES_ALMACENAMIENTO.sesionBloqueada,
+    );
+    if (bloqueada) return null;
+
     const cliente = requerirSupabase();
     const { data, error } = await cliente.auth.getSession();
     if (error) {
@@ -142,10 +159,20 @@ export const servicioAutenticacion = {
     return construirUsuario(data.session.user.id, data.session.user.email ?? '', perfil);
   },
 
+  // Con biometría activa, "cerrar sesión" es un bloqueo local (como en una
+  // app bancaria): vuelve a pedir acceso, pero no destruye el token de
+  // Supabase — así la huella puede volver a entrar sin pedir correo y
+  // contraseña de nuevo. Sin biometría activa, es un cierre de sesión real.
   async cerrarSesion(): Promise<void> {
+    const usuarioIdBiometria = await servicioAlmacenamiento.obtenerDato<string>(
+      CLAVES_ALMACENAMIENTO.usuarioBiometria,
+    );
+    if (usuarioIdBiometria) {
+      await servicioAlmacenamiento.guardarDato(CLAVES_ALMACENAMIENTO.sesionBloqueada, true);
+      return;
+    }
     const cliente = requerirSupabase();
     await cliente.auth.signOut();
-    await servicioAlmacenamiento.eliminarDato(CLAVES_ALMACENAMIENTO.usuarioBiometria);
   },
 
   async solicitarRecuperacion(email: string): Promise<void> {
