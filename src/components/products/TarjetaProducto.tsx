@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { ESPACIO, TIPOGRAFIA } from '@/constants/theme';
 import { useTema } from '@/hooks/useTema';
 import type { EtiquetaProducto, Producto } from '@/types';
@@ -24,15 +24,18 @@ export function TarjetaProducto({
   const { colores } = useTema();
   const colorEtiqueta = (etiqueta: EtiquetaProducto) => (etiqueta === '-15%' ? colores.arcilla : colores.tinta);
 
-  return (
-    <View style={styles.contenedor}>
-      <Pressable
-        style={styles.superficiePresionable}
-        onPress={alPresionar}
-        accessibilityRole="button"
-        accessibilityLabel={producto.nombre}
-      />
+  const alPresionarFavorito = (evento: GestureResponderEvent) => {
+    evento.stopPropagation();
+    alAlternarFavorito();
+  };
 
+  return (
+    <Pressable
+      style={styles.contenedor}
+      onPress={alPresionar}
+      accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
+      accessibilityLabel={producto.nombre}
+    >
       <View>
         <MarcadorImagenProducto uri={producto.imagenes[0]} />
         {mostrarEtiquetas && producto.etiquetas.length > 0 ? (
@@ -54,7 +57,7 @@ export function TarjetaProducto({
           {producto.nombre}
         </Text>
         <Pressable
-          onPress={alAlternarFavorito}
+          onPress={alPresionarFavorito}
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel={esFavorito ? 'Quitar de favoritos' : 'Guardar en favoritos'}
@@ -75,13 +78,12 @@ export function TarjetaProducto({
           </Text>
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, gap: ESPACIO.sm },
-  superficiePresionable: StyleSheet.absoluteFill,
   etiquetas: {
     position: 'absolute',
     top: ESPACIO.sm,

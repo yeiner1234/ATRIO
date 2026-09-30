@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { BotonPrimario } from '@/components/common/BotonPrimario';
 import { CampoTexto } from '@/components/common/CampoTexto';
@@ -17,9 +18,15 @@ function numeroATexto(valor: number | undefined): string {
   return valor == null ? '' : String(valor);
 }
 
+function limpiarTextoPrecio(texto: string): string {
+  const soloValidos = texto.replace(/[^0-9.]/g, '');
+  const primerPunto = soloValidos.indexOf('.');
+  if (primerPunto === -1) return soloValidos;
+  return soloValidos.slice(0, primerPunto + 1) + soloValidos.slice(primerPunto + 1).replace(/\./g, '');
+}
+
 function textoANumero(texto: string): number {
-  const limpio = texto.replace(/[^0-9.]/g, '');
-  const valor = Number(limpio);
+  const valor = Number(limpiarTextoPrecio(texto));
   return Number.isFinite(valor) ? valor : 0;
 }
 
@@ -50,6 +57,11 @@ export function FormularioProducto({ producto, categorias }: PropiedadesFormular
     guardar,
     esEdicion,
   } = useFormularioProducto(producto);
+
+  const [textoPrecio, setTextoPrecio] = useState(() => numeroATexto(generales.precio));
+  const [textoPrecioAnterior, setTextoPrecioAnterior] = useState(() =>
+    numeroATexto(generales.precioAnterior),
+  );
 
   return (
     <View style={styles.contenedor}>
@@ -105,8 +117,12 @@ export function FormularioProducto({ producto, categorias }: PropiedadesFormular
         <View style={styles.mitad}>
           <CampoTexto
             etiqueta="Precio (S/)"
-            valor={numeroATexto(generales.precio)}
-            alCambiar={(v) => actualizarGeneral('precio', textoANumero(v))}
+            valor={textoPrecio}
+            alCambiar={(v) => {
+              const limpio = limpiarTextoPrecio(v);
+              setTextoPrecio(limpio);
+              actualizarGeneral('precio', textoANumero(limpio));
+            }}
             placeholder="0.00"
             error={errores.precio}
           />
@@ -114,10 +130,12 @@ export function FormularioProducto({ producto, categorias }: PropiedadesFormular
         <View style={styles.mitad}>
           <CampoTexto
             etiqueta="Precio anterior (opcional)"
-            valor={numeroATexto(generales.precioAnterior)}
-            alCambiar={(v) =>
-              actualizarGeneral('precioAnterior', v.trim() === '' ? undefined : textoANumero(v))
-            }
+            valor={textoPrecioAnterior}
+            alCambiar={(v) => {
+              const limpio = limpiarTextoPrecio(v);
+              setTextoPrecioAnterior(limpio);
+              actualizarGeneral('precioAnterior', limpio.trim() === '' ? undefined : textoANumero(limpio));
+            }}
             placeholder="0.00"
             error={errores.precioAnterior}
           />
