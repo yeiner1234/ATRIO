@@ -35,8 +35,6 @@ export interface Producto {
   activo: boolean;
 }
 
-// Datos generales editables desde el panel admin (sin id/colores/variantes/
-// fechaAlta/popularidad30d/activo: esos se derivan o se gestionan aparte).
 export interface DatosProductoGenerales {
   sku: string;
   nombre: string;

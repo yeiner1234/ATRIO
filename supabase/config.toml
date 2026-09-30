@@ -1,0 +1,12 @@
+# Configuración mínima de Supabase CLI para este repo: solo se usa para
+# desplegar Edge Functions contra el proyecto remoto ya existente (no hay
+# stack local `supabase start` configurado aquí).
+#
+# Antes de desplegar:
+#   supabase link --project-ref <ID_DEL_PROYECTO>
+#   supabase secrets set OPENAI_API_KEY=sk-... OPENAI_MODEL=gpt-5.6-luna
+#   supabase functions deploy agente-atrio
+project_id = "atrio"
+
+[functions.agente-atrio]
+verify_jwt = true

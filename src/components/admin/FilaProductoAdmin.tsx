@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import { ESPACIO, MEDIDAS, TIPOGRAFIA } from '@/constants/theme';
+import { MarcadorImagenProducto } from '@/components/products/MarcadorImagenProducto';
+import { ESPACIO, MEDIDAS, RADIO, TIPOGRAFIA } from '@/constants/theme';
 import { useTema } from '@/hooks/useTema';
 import type { Producto } from '@/types';
 import { formatearSoles } from '@/utils/moneda';
 import { esStockBajo, stockTotal } from '@/utils/variantes';
+
+const TAMANO_MINIATURA = 52;
 
 interface PropiedadesFilaProductoAdmin {
   producto: Producto;
@@ -28,6 +31,12 @@ export function FilaProductoAdmin({
       accessibilityRole="button"
       accessibilityLabel={`Editar ${producto.nombre}`}
     >
+      <MarcadorImagenProducto
+        uri={producto.imagenes[0]}
+        sinEtiqueta
+        radio={RADIO.talla}
+        style={styles.miniatura}
+      />
       <View style={styles.info}>
         <View style={styles.filaTitulo}>
           <Text style={[styles.nombre, { color: colores.tinta }]} numberOfLines={1}>
@@ -66,6 +75,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: ESPACIO.base,
     borderBottomWidth: 1,
   },
+  miniatura: { width: TAMANO_MINIATURA, height: TAMANO_MINIATURA, flexShrink: 0 },
   info: { flex: 1, gap: 2 },
   filaTitulo: { flexDirection: 'row', alignItems: 'center', gap: ESPACIO.xs },
   nombre: { flex: 1, fontFamily: TIPOGRAFIA.titulo, fontSize: 14 },

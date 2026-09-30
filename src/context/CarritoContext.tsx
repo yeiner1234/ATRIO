@@ -53,10 +53,6 @@ function buscarPorcentajeCupon(codigo: string): number | null {
   return encontrado ? encontrado.porcentaje : null;
 }
 
-// Invitado (sin sesión): carrito local en AsyncStorage, igual que siempre.
-// Autenticado: `carritos`/`items_carrito` de Supabase son la ÚNICA fuente —
-// nunca se mezcla con lo que había como invitado en el mismo dispositivo,
-// por la misma razón que ya se explica en FavoritosContext.
 export function CarritoProvider({ children }: { children: ReactNode }) {
   const { usuario, listo } = useAuth();
   const [items, setItems] = useState<ItemCarrito[]>([]);
@@ -99,7 +95,6 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     };
   }, [usuario, listo]);
 
-  // Solo se persiste localmente en modo invitado — con sesión, Supabase ya es la fuente.
   useEffect(() => {
     if (!listo || usuario || cargando) return;
     const aPersistir: EstadoCarritoPersistido = { items, codigoCupon };

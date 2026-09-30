@@ -18,11 +18,14 @@ function ContenidoApp() {
     <>
       <StatusBar style={esOscuro ? 'light' : 'dark'} />
       <Stack
+        initialRouteName="index"
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colores.papel },
         }}
-      />
+      >
+        <Stack.Screen name="asistente" options={{ presentation: 'modal' }} />
+      </Stack>
     </>
   );
 }

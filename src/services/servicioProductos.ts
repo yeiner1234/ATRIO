@@ -1,10 +1,10 @@
+import { File } from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
 import type { Categoria, ColorProducto, DatosProductoGenerales, Producto, VarianteProducto } from '@/types';
 import { mapearProducto, type FilaProductoSupabase } from './mappers/mapearProducto';
 
-// Select anidado único: reconstruye un Producto completo (categoría, variantes
-// con su color, e imágenes) en una sola ida a la base. Nombres de columna
-// exactamente como existen en Supabase (confirmados por Yeiner).
+const BUCKET_IMAGENES_PRODUCTO = 'productos';
+
 const SELECT_PRODUCTO = `
   id, sku, nombre, categoria_id, precio, precio_anterior, descripcion, composicion,
   confeccion, origen, etiquetas, es_novedad, popularidad_30d, fecha_alta, activo,
@@ -74,15 +74,13 @@ export const servicioProductos = {
     const cliente = requerirSupabase();
     const [{ data: filasCategorias, error: errorCategorias }, { data: filasProductos, error: errorProductos }] =
       await Promise.all([
-        cliente.from('categorias').select('id, nombre, subcategorias'),
+        cliente.from('categorias').select('id, nombre, subcategorias, imagen_url'),
         cliente.from('productos').select('categoria_id'),
       ]);
 
     if (errorCategorias) throw new Error(`No se pudieron cargar las categorías: ${errorCategorias.message}`);
     if (errorProductos) throw new Error(`No se pudo calcular el conteo por categoría: ${errorProductos.message}`);
 
-    // `categorias.conteo_articulos` no existe en la base: se calcula aquí a
-    // partir de `productos.categoria_id` (indicado explícitamente por Yeiner).
     const conteos = new Map<string, number>();
     for (const fila of filasProductos ?? []) {
       const clave = (fila as { categoria_id: string }).categoria_id;
@@ -90,12 +88,18 @@ export const servicioProductos = {
     }
 
     return (filasCategorias ?? []).map((fila) => {
-      const tipada = fila as { id: string; nombre: string; subcategorias: string[] | null };
+      const tipada = fila as {
+        id: string;
+        nombre: string;
+        subcategorias: string[] | null;
+        imagen_url: string | null;
+      };
       return {
         id: tipada.id,
         nombre: tipada.nombre,
         subcategorias: tipada.subcategorias ?? [],
         conteoArticulos: conteos.get(tipada.id) ?? 0,
+        imagenUrl: tipada.imagen_url ?? undefined,
       };
     });
   },
@@ -111,9 +115,20 @@ export const servicioProductos = {
     return (data ?? []) as ColorProducto[];
   },
 
-  // --- Admin: CRUD de productos/variantes (Yeiner) — Supabase real ---
-  // El cache en memoria que existía en esta fase anterior se eliminó: esto ya
-  // escribe de verdad en `productos` / `variantes_producto` / `imagenes_producto`.
+  async subirImagen(uri: string, contentType = 'image/jpeg'): Promise<string> {
+    const cliente = requerirSupabase();
+    const extension = contentType.split('/')[1] ?? 'jpg';
+    const ruta = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+
+    const archivo = new File(uri);
+    const bytes = await archivo.arrayBuffer();
+
+    const { error } = await cliente.storage.from(BUCKET_IMAGENES_PRODUCTO).upload(ruta, bytes, { contentType });
+    if (error) throw new Error(`No se pudo subir la foto: ${error.message}`);
+
+    const { data } = cliente.storage.from(BUCKET_IMAGENES_PRODUCTO).getPublicUrl(ruta);
+    return data.publicUrl;
+  },
 
   async crearProducto(
     datos: DatosProductoGenerales & { variantes: VarianteProducto[]; imagenes: string[] },
@@ -192,12 +207,6 @@ export const servicioProductos = {
     return actualizado;
   },
 
-  // Reconcilia por (talla, color) en vez de borrar todo: una vez que existen
-  // pedidos, `items_pedido.variante_id` puede apuntar a una fila de
-  // `variantes_producto` — borrarla y reinsertarla con otro id rompería esa
-  // referencia histórica. Cada cambio de stock deja su propio movimiento en
-  // `movimientos_stock` (ingreso al crear una combinación nueva, ajuste al
-  // cambiar el stock de una que ya existía).
   async actualizarVariantesEImagenes(
     id: string,
     variantes: VarianteProducto[],
@@ -266,8 +275,6 @@ export const servicioProductos = {
       const { error: errorMovimientos } = await cliente.from('movimientos_stock').insert(
         movimientos.map((m) => ({ variante_id: m.variante_id, tipo: m.tipo, cantidad: m.cantidad, creado_por: m.creado_por })),
       );
-      // No se aborta la edición por esto: el stock ya quedó bien: solo se
-      // avisa que la bitácora de movimientos no se pudo registrar.
       if (errorMovimientos) console.error('No se pudo registrar el movimiento de stock.', errorMovimientos);
     }
 
@@ -302,9 +309,4 @@ export const servicioProductos = {
     if (!actualizado) throw new Error(`El producto "${id}" no existe.`);
     return actualizado;
   },
-
-  // El descuento de stock al confirmar una compra ya NO vive aquí: lo hace
-  // por completo la RPC `confirmar_compra` (validar stock, crear pedido,
-  // descontar stock, registrar movimiento, crear pago, limpiar carrito, todo
-  // en una sola transacción). Ver servicioPedidos.confirmarCompra().
 };

@@ -253,9 +253,8 @@ export function FormularioProducto({ producto, categorias }: PropiedadesFormular
       <View style={[styles.separador, { backgroundColor: tema.borde }]} />
       <Text style={[styles.tituloSeccion, { color: tema.textoSecundario }]}>FOTOGRAFÍAS</Text>
       <Text style={[styles.notaFotos, { color: tema.textoSecundario }]}>
-        Elige fotos desde la galería del teléfono. Sin Supabase Storage conectado, se guardan en
-        este dispositivo; cuando se conecte la nube se subirán automáticamente sin cambiar esta
-        pantalla.
+        Elige fotos desde la galería del teléfono. Se suben a la nube automáticamente, así que
+        se ven en todos los dispositivos.
       </Text>
 
       {imagenes.length > 0 ? (

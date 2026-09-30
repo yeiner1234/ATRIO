@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { COLORS } from '@/constants/colors';
 import { RADIO, RELACION_IMAGEN, TIPOGRAFIA } from '@/constants/theme';
@@ -24,10 +25,24 @@ export function MarcadorImagenProducto({
   llenar = false,
   style,
 }: PropiedadesMarcadorImagenProducto) {
-  if (uri) {
+  const [fallo, setFallo] = useState(false);
+
+  // Si cambia la URL (ej. otro producto/categoría reutilizando el mismo
+  // componente), se reintenta desde cero en vez de arrastrar el error de
+  // la imagen anterior.
+  useEffect(() => {
+    setFallo(false);
+  }, [uri]);
+
+  if (uri && !fallo) {
     return (
       <View style={[styles.contenedor, { borderRadius: radio }, llenar ? styles.lleno : { aspectRatio: relacion }, style]}>
-        <Image source={{ uri }} style={styles.imagenReal} resizeMode="cover" />
+        <Image
+          source={{ uri }}
+          style={styles.imagenReal}
+          resizeMode="cover"
+          onError={() => setFallo(true)}
+        />
       </View>
     );
   }

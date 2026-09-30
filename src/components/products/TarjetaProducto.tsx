@@ -25,7 +25,14 @@ export function TarjetaProducto({
   const colorEtiqueta = (etiqueta: EtiquetaProducto) => (etiqueta === '-15%' ? colores.arcilla : colores.tinta);
 
   return (
-    <Pressable style={styles.contenedor} onPress={alPresionar} accessibilityRole="button">
+    <View style={styles.contenedor}>
+      <Pressable
+        style={styles.superficiePresionable}
+        onPress={alPresionar}
+        accessibilityRole="button"
+        accessibilityLabel={producto.nombre}
+      />
+
       <View>
         <MarcadorImagenProducto uri={producto.imagenes[0]} />
         {mostrarEtiquetas && producto.etiquetas.length > 0 ? (
@@ -68,12 +75,13 @@ export function TarjetaProducto({
           </Text>
         ) : null}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   contenedor: { flex: 1, gap: ESPACIO.sm },
+  superficiePresionable: StyleSheet.absoluteFill,
   etiquetas: {
     position: 'absolute',
     top: ESPACIO.sm,

@@ -7,7 +7,14 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { servicioAutenticacion } from '@/services/servicioAutenticacion';
+import { conLimiteDeTiempo } from '@/utils/promesas';
 import type { Usuario } from '@/types/Usuario';
+
+// Igual que en useSplashBootstrap.ts: esta restauración de sesión es
+// independiente de la del splash (corre en paralelo), y sin límite propio
+// también podía quedar colgada para siempre si Supabase respondía lento o
+// nunca respondía — `listo` nunca pasaba a true.
+const MS_LIMITE_RESTAURAR_SESION = 8000;
 
 interface AuthContexto {
   usuario: Usuario | null;
@@ -31,8 +38,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     let cancelado = false;
-    servicioAutenticacion
-      .obtenerUsuarioActual()
+    conLimiteDeTiempo(servicioAutenticacion.obtenerUsuarioActual(), MS_LIMITE_RESTAURAR_SESION, null)
       .then((usuarioActual) => {
         if (!cancelado) setUsuario(usuarioActual);
       })
@@ -43,7 +49,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         console.error('AuthContext: no se pudo restaurar la sesión.', err);
       })
       .finally(() => {
-        if (!cancelado) setListo(true);
+        if (!cancelado) {
+          setListo(true);
+          console.log('AUTH listo');
+        }
       });
     return () => {
       cancelado = true;

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HeroCampana } from '@/components/common/HeroCampana';
+import { CarruselCampana } from '@/components/common/CarruselCampana';
 import { CirculoCategoria } from '@/components/products/CirculoCategoria';
 import { TarjetaProducto } from '@/components/products/TarjetaProducto';
 import { COLORS } from '@/constants/colors';
@@ -11,7 +11,7 @@ import { useFavoritos } from '@/hooks/useFavoritos';
 import { useInicio } from '@/hooks/useInicio';
 
 export default function PantallaInicio() {
-  const { campana, categorias, novedades } = useInicio();
+  const { campanas, categorias, novedades } = useInicio();
   const { esFavorito, alternarFavorito, cantidadFavoritos } = useFavoritos();
 
   const irACatalogo = (categoria?: string) =>
@@ -57,10 +57,7 @@ export default function PantallaInicio() {
         </View>
 
         <View style={styles.bloque}>
-          <HeroCampana
-            campana={campana}
-            alPresionarBoton={() => irACatalogo(campana.categoriaDestino)}
-          />
+          <CarruselCampana campanas={campanas} alPresionarBoton={irACatalogo} />
         </View>
 
         <View style={[styles.bloque, styles.encabezadoSeccion]}>

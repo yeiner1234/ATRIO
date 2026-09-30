@@ -32,13 +32,18 @@ interface FilaItemPedido {
   color_nombre: string | null;
   cantidad: number;
   precio_unitario: number;
-  // Se resuelve vía variante_id → productos → categorías (no es una
-  // "foto" del momento de compra como el resto de esta fila: es la
-  // categoría ACTUAL del producto, solo para poder reportar por
-  // categoría — si el producto cambia de categoría después, el reporte
-  // refleja la categoría de hoy, no la de cuando se compró).
+  // Se resuelve vía variante_id → productos → categorías/imágenes (no es
+  // una "foto" del momento de compra como el resto de esta fila: son datos
+  // ACTUALES del producto — igual que la categoría para Reportes, la
+  // imagen es "la que tiene el producto hoy", no necesariamente la que
+  // tenía al momento de la compra si se editó o se borraron sus fotos
+  // después).
   variantes_producto: {
-    productos: { categoria_id: string; categorias: { nombre: string } | { nombre: string }[] | null } | null;
+    productos: {
+      categoria_id: string;
+      categorias: { nombre: string } | { nombre: string }[] | null;
+      imagenes_producto: { url: string; orden: number }[] | null;
+    } | null;
   } | null;
 }
 
@@ -62,14 +67,18 @@ interface FilaPedido {
 // color, precio) — a propósito, para que el historial no cambie si el
 // producto real se edita o se borra después. Por eso NO se reconstruye
 // contra el producto real: se arma un `Producto` sintético solo con lo
-// necesario para mostrar la línea del pedido (sin imagen real, porque
-// items_pedido no la guarda). La categoría es la excepción: se resuelve en
-// vivo (ver comentario en FilaItemPedido) porque Reportes la necesita para
-// agrupar "categorías más vendidas".
+// necesario para mostrar la línea del pedido. La categoría y la imagen son
+// la excepción: se resuelven en vivo (ver comentario en FilaItemPedido)
+// porque Reportes necesita la categoría y la UI necesita algo mejor que un
+// marcador de posición para mostrar — si el producto se borra o pierde sus
+// fotos después de la compra, vuelve a verse el marcador, sin romper nada.
 function productoHistoricoDesde(fila: FilaItemPedido): Producto {
   const productoRelacionado = fila.variantes_producto?.productos;
   const categoriaFila = productoRelacionado?.categorias;
   const categoria = Array.isArray(categoriaFila) ? categoriaFila[0] : categoriaFila;
+  const imagenPrincipal = [...(productoRelacionado?.imagenes_producto ?? [])].sort(
+    (a, b) => a.orden - b.orden,
+  )[0]?.url;
   return {
     id: fila.variante_id,
     sku: '',
@@ -81,7 +90,7 @@ function productoHistoricoDesde(fila: FilaItemPedido): Producto {
     composicion: '',
     confeccion: '',
     origen: '',
-    imagenes: [],
+    imagenes: imagenPrincipal ? [imagenPrincipal] : [],
     colores: fila.color_nombre ? [{ id: '', nombre: fila.color_nombre, hex: '#CCCCCC' }] : [],
     variantes: [],
     etiquetas: [],
@@ -151,7 +160,7 @@ const SELECT_PEDIDO = `
   id, usuario_id, numero, estado, tipo_entrega, direccion_id, subtotal, descuento, igv, total, creado_en,
   items_pedido (
     variante_id, nombre_producto, talla, color_nombre, cantidad, precio_unitario,
-    variantes_producto ( productos ( categoria_id, categorias ( nombre ) ) )
+    variantes_producto ( productos ( categoria_id, categorias ( nombre ), imagenes_producto ( url, orden ) ) )
   ),
   pagos ( metodo )
 `;

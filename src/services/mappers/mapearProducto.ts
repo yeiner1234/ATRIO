@@ -1,9 +1,5 @@
 import type { ColorProducto, EtiquetaProducto, Producto, VarianteProducto } from '@/types';
 
-// Forma exacta de una fila devuelta por Supabase con el select anidado que
-// usa servicioProductos.ts (productos + categorias + variantes_producto +
-// colores + imagenes_producto). Nombres de columna en snake_case, tal como
-// existen en la base real (confirmado por Yeiner, no inventado).
 export interface FilaColorSupabase {
   id: string;
   nombre: string;
@@ -59,7 +55,6 @@ function coloresDesdeVariantes(variantes: VarianteProducto[], filas: FilaVariant
     vistos.add(fila.colores.id);
     resultado.push({ id: fila.colores.id, nombre: fila.colores.nombre, hex: fila.colores.hex });
   }
-  // Si una variante no trae color embebido (FK rota o color borrado), no se pierde: se ignora el color pero la variante sigue.
   void variantes;
   return resultado;
 }

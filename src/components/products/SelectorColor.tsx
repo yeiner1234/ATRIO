@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '@/constants/colors';
 import { ESPACIO, TIPOGRAFIA } from '@/constants/theme';
 import type { ColorProducto } from '@/types';

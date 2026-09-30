@@ -15,7 +15,7 @@ export function CirculoCategoria({ categoria, alPresionar }: PropiedadesCirculoC
   return (
     <Pressable style={styles.contenedor} onPress={alPresionar} accessibilityRole="button">
       <View style={styles.circulo}>
-        <MarcadorImagenProducto llenar radio={DIAMETRO / 2} sinEtiqueta />
+        <MarcadorImagenProducto uri={categoria.imagenUrl} llenar radio={DIAMETRO / 2} sinEtiqueta />
       </View>
       <Text style={styles.nombre} numberOfLines={1}>
         {categoria.nombre}

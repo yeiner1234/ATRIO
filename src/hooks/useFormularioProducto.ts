@@ -103,8 +103,6 @@ export function useFormularioProducto(productoExistente?: Producto) {
     }));
   };
 
-  // El stock de una combinación que ya existía se conserva aunque se
-  // deseleccione y se vuelva a seleccionar la talla/color.
   const obtenerStock = (talla: string, colorId: string): number =>
     stockPorClave[claveVariante(talla, colorId)] ?? 0;
 
@@ -115,7 +113,6 @@ export function useFormularioProducto(productoExistente?: Producto) {
     }));
   };
 
-  // Talla × Color, sin duplicados (la clave es literalmente el par).
   const variantesActuales = useMemo<VarianteProducto[]>(() => {
     const idBase = productoExistente?.id ?? 'nuevo';
     const resultado: VarianteProducto[] = [];
@@ -132,9 +129,6 @@ export function useFormularioProducto(productoExistente?: Producto) {
     return resultado;
   }, [tallasSeleccionadas, coloresSeleccionados, stockPorClave, productoExistente]);
 
-  // Selecciona una foto real de la galería del teléfono (expo-image-picker).
-  // Sin Supabase Storage conectado, se guarda la URI local del dispositivo:
-  // se ve bien en ESTE teléfono, pero no viaja a la nube todavía.
   const agregarImagenDesdeGaleria = async () => {
     setErrorImagen(null);
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -150,10 +144,12 @@ export function useFormularioProducto(productoExistente?: Producto) {
         quality: 0.7,
       });
       if (resultado.canceled) return;
-      const uri = resultado.assets[0]?.uri;
-      if (uri) setImagenes((previo) => [...previo, uri]);
+      const activo = resultado.assets[0];
+      if (!activo?.uri) return;
+      const url = await servicioProductos.subirImagen(activo.uri, activo.mimeType ?? 'image/jpeg');
+      setImagenes((previo) => [...previo, url]);
     } catch {
-      setErrorImagen('No se pudo abrir la galería. Intenta de nuevo.');
+      setErrorImagen('No se pudo subir la imagen. Intenta de nuevo.');
     } finally {
       setCargandoImagen(false);
     }

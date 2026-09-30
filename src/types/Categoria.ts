@@ -3,4 +3,5 @@ export interface Categoria {
   nombre: string;
   conteoArticulos: number;
   subcategorias: string[];
+  imagenUrl?: string;
 }

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { campanaInicio } from '@/data/campana';
+import { servicioCampana } from '@/services/servicioCampana';
 import { servicioProductos } from '@/services/servicioProductos';
-import type { Categoria, Producto } from '@/types';
+import type { CampanaInicio, Categoria, Producto } from '@/types';
 
 export function useInicio() {
+  const [campanas, setCampanas] = useState<CampanaInicio[]>([campanaInicio]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [novedades, setNovedades] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -13,9 +15,14 @@ export function useInicio() {
     let cancelado = false;
     setCargando(true);
     setError(null);
-    Promise.all([servicioProductos.obtenerCategorias(), servicioProductos.obtenerNovedades(4)])
-      .then(([categoriasCargadas, novedadesCargadas]) => {
+    Promise.all([
+      servicioCampana.obtenerCampanasActivas(),
+      servicioProductos.obtenerCategorias(),
+      servicioProductos.obtenerNovedades(4),
+    ])
+      .then(([campanasCargadas, categoriasCargadas, novedadesCargadas]) => {
         if (cancelado) return;
+        setCampanas(campanasCargadas);
         setCategorias(categoriasCargadas);
         setNovedades(novedadesCargadas);
       })
@@ -32,5 +39,5 @@ export function useInicio() {
     };
   }, []);
 
-  return { campana: campanaInicio, categorias, novedades, cargando, error };
+  return { campanas, categorias, novedades, cargando, error };
 }

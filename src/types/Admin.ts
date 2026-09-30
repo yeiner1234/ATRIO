@@ -1,4 +1,3 @@
-// Mismos valores que el CHECK real de la columna pedidos.estado en Supabase.
 export type EstadoPedido = 'preparado' | 'en_camino' | 'entregado' | 'cancelado' | 'devuelto';
 
 export interface ResumenDashboardAdmin {
@@ -10,15 +9,13 @@ export interface ResumenDashboardAdmin {
   pedidosEntregados: number;
 }
 
-// Interfaz desacoplada del módulo de pedidos (Hans). El Dashboard y
-// /admin/pedidos solo conocen esta forma; no dependen de su implementación.
 export interface PedidoReciente {
   id: string;
   numero: string;
   cliente: string;
   total: number;
   estado: EstadoPedido;
-  fecha: string; // ISO 8601
+  fecha: string;
 }
 
 export interface VentaReciente {
@@ -29,8 +26,6 @@ export interface VentaReciente {
   estado: EstadoPedido;
 }
 
-// Un registro por VARIANTE con stock bajo (no por producto): el modelo real
-// es producto -> variantes[] (talla + color + stock propio).
 export interface ProductoStockBajo {
   varianteId: string;
   productoId: string;

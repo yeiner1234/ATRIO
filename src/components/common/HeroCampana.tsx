@@ -16,7 +16,7 @@ const ALTURA_HERO = 330;
 export function HeroCampana({ campana, alPresionarBoton }: PropiedadesHeroCampana) {
   return (
     <View style={styles.contenedor}>
-      <MarcadorImagenProducto llenar radio={0} sinEtiqueta />
+      <MarcadorImagenProducto uri={campana.imagenUrl} llenar radio={0} sinEtiqueta />
       <LinearGradient
         colors={['transparent', COLORS.tinta72]}
         style={styles.degradado}

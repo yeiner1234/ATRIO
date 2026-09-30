@@ -3,4 +3,5 @@ export interface CampanaInicio {
   titulo: string;
   textoBoton: string;
   categoriaDestino: string;
+  imagenUrl?: string;
 }
