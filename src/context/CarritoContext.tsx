@@ -98,6 +98,20 @@ function lineasValidas(items: ItemCarrito[]): ItemCarrito[] {
   );
 }
 
+/**
+ * Devuelve una función estable que lee el último valor.
+ * La ref se actualiza en un efecto, no durante el render.
+ */
+function useLectorDeValor<T>(valor: T): () => T {
+  const ref = useRef(valor);
+
+  useEffect(() => {
+    ref.current = valor;
+  }, [valor]);
+
+  return useCallback(() => ref.current, []);
+}
+
 export function CarritoProvider({
   children,
 }: {
@@ -224,14 +238,12 @@ export function CarritoProvider({
   );
 
   /*
-   * Los ítems se leen desde una ref para que
+   * Los ítems se leen con useLectorDeValor para que
    * sincronizarCarrito no cambie en cada render.
    * La pantalla la llama al enfocarse y, si dependiera
    * de items, cada refresco volvería a disparar otro refresco.
    */
-  const itemsRef = useRef(items);
-
-  itemsRef.current = items;
+  const leerItems = useLectorDeValor(items);
 
   /*
    * Refresco silencioso:
@@ -260,7 +272,7 @@ export function CarritoProvider({
        */
       const ids = [
         ...new Set(
-          itemsRef.current.map(
+          leerItems().map(
             (item) => item.producto.id
           )
         ),
@@ -304,7 +316,7 @@ export function CarritoProvider({
         err
       );
     }
-  }, [usuario, listo, cargando]);
+  }, [usuario, listo, cargando, leerItems]);
 
   const agregarItem = useCallback(
     (
