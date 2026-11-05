@@ -1,6 +1,5 @@
--- cambiar_estado_pedido: el administrador y el servidor pueden hacer cualquier
--- cambio válido; el cliente puede cancelar su propio pedido mientras no haya
--- salido (pendiente de pago o preparado).
+-- El cliente puede cancelar su propio pedido mientras no haya salido
+-- (pendiente de pago o preparado). Solo cambia la parte de permisos.
 
 CREATE OR REPLACE FUNCTION public.cambiar_estado_pedido(p_numero text, p_estado_nuevo text)
 RETURNS void
