@@ -60,6 +60,9 @@ export default function PantallaCatalogo() {
     hayMas,
     cargarMas,
     cargandoMas,
+    cargando,
+    error,
+    recargar,
   } = catalogo;
 
   useEffect(() => {
@@ -146,16 +149,30 @@ export default function PantallaCatalogo() {
           ) : undefined
         }
         ListEmptyComponent={
-          <EstadoVacio
-            titulo={`Sin resultados para «${terminoBusqueda.trim() || nombreCategoriaActiva.toLowerCase()}»`}
-            descripcion="Prueba con otra categoría o cambia los filtros."
-            textoBoton="VER TODO"
-            alPresionarBoton={() => {
-              setTerminoBusqueda('');
-              setCategoriaActiva('todo');
-              reiniciarFiltros();
-            }}
-          />
+          cargando ? (
+            <View style={styles.cargandoLista}>
+              <ActivityIndicator color={colores.tinta} />
+            </View>
+          ) : error ? (
+            <EstadoVacio
+              icono="alert-circle-outline"
+              titulo="No se pudo cargar"
+              descripcion={error}
+              textoBoton="REINTENTAR"
+              alPresionarBoton={recargar}
+            />
+          ) : (
+            <EstadoVacio
+              titulo={`Sin resultados para «${terminoBusqueda.trim() || nombreCategoriaActiva.toLowerCase()}»`}
+              descripcion="Prueba con otra categoría o cambia los filtros."
+              textoBoton="VER TODO"
+              alPresionarBoton={() => {
+                setTerminoBusqueda('');
+                setCategoriaActiva('todo');
+                reiniciarFiltros();
+              }}
+            />
+          )
         }
       />
 
@@ -204,4 +221,10 @@ const styles = StyleSheet.create({
   filaRejilla: { gap: MEDIDAS.gapTarjetas },
   celda: { marginBottom: MEDIDAS.gapTarjetas },
   pieCargando: { paddingVertical: ESPACIO.base, alignItems: 'center' },
+  cargandoLista: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: ESPACIO.enorme,
+  },
 });

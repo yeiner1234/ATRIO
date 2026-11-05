@@ -40,6 +40,7 @@ export function useCatalogo({ categoriaInicial = 'todo' }: OpcionesUseCatalogo =
   const [cargando, setCargando] = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [intentoRecarga, setIntentoRecarga] = useState(0);
 
   // Cada cambio de filtros abre una "generación" nueva: las respuestas de
   // generaciones anteriores (que pueden llegar tarde) se descartan.
@@ -63,7 +64,8 @@ export function useCatalogo({ categoriaInicial = 'todo' }: OpcionesUseCatalogo =
     [categoriaActiva, busquedaAplicada, filtros, orden],
   );
 
-  // Cualquier cambio de filtros, búsqueda u orden vuelve a la página 1.
+  // Cualquier cambio de filtros, búsqueda u orden vuelve a la página 1. También
+  // recargar(), que repite la página 1 con los mismos filtros.
   useEffect(() => {
     generacionRef.current += 1;
     const generacion = generacionRef.current;
@@ -92,7 +94,9 @@ export function useCatalogo({ categoriaInicial = 'todo' }: OpcionesUseCatalogo =
     return () => {
       generacionRef.current += 1;
     };
-  }, [opciones]);
+  }, [opciones, intentoRecarga]);
+
+  const recargar = useCallback(() => setIntentoRecarga((intento) => intento + 1), []);
 
   const cargarMas = useCallback(() => {
     if (cargando || cargandoMas || !hayMas) return;
@@ -135,6 +139,7 @@ export function useCatalogo({ categoriaInicial = 'todo' }: OpcionesUseCatalogo =
     contadorResultados: total,
     hayMas,
     cargarMas,
+    recargar,
     cargando,
     cargandoMas,
     error,

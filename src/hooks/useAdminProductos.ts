@@ -82,6 +82,7 @@ export function useAdminProductos() {
     categorias,
     cargando,
     error,
+    recargar,
     busqueda,
     setBusqueda,
     categoriaId,

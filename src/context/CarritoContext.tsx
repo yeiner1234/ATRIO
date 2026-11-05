@@ -247,8 +247,8 @@ export function CarritoProvider({
 
   /*
    * Refresco silencioso:
-   * no toca cargando ni error.
-   * Si falla la red, el carrito se queda como estaba.
+   * no toca cargando, y solo limpia error si leyó el carrito.
+   * Si falla la red, el carrito y el error se quedan como estaban.
    * El checkout vuelve a validar igualmente.
    */
   const sincronizarCarrito = useCallback(async () => {
@@ -259,6 +259,7 @@ export function CarritoProvider({
         setItems(
           await servicioCarrito.obtenerItems()
         );
+        setError(null);
 
         return;
       }

@@ -14,6 +14,9 @@ export function useDetalleProducto(id: string) {
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [intentoCarga, setIntentoCarga] = useState(0);
+
+  const recargar = useCallback(() => setIntentoCarga((intento) => intento + 1), []);
 
   useEffect(() => {
     let cancelado = false;
@@ -39,7 +42,7 @@ export function useDetalleProducto(id: string) {
     return () => {
       cancelado = true;
     };
-  }, [id]);
+  }, [id, intentoCarga]);
 
   const tallasDisponibles = useMemo(
     () => (producto ? tallasDelProducto(producto) : []),
@@ -92,6 +95,7 @@ export function useDetalleProducto(id: string) {
     producto,
     cargando,
     error,
+    recargar,
     tallaSeleccionada,
     seleccionarTalla,
     tallasDisponibles,

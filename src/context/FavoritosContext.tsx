@@ -11,6 +11,8 @@ interface ValorFavoritosContext {
   esFavorito: (productoId: string) => boolean;
   alternarFavorito: (productoId: string) => void;
   quitarFavorito: (productoId: string) => void;
+  /** Vuelve a leer la lista de IDs (para reintentar si falló la carga). */
+  recargar: () => void;
 }
 
 export const FavoritosContext = createContext<ValorFavoritosContext | null>(null);
@@ -24,8 +26,10 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
   const [idsFavoritos, setIdsFavoritos] = useState<string[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [intentoCarga, setIntentoCarga] = useState(0);
+  const recargar = useCallback(() => setIntentoCarga((intento) => intento + 1), []);
 
-  // Carga inicial y cada vez que cambia la sesión (login/logout).
+  // Carga inicial, cada vez que cambia la sesión (login/logout) y al reintentar.
   useEffect(() => {
     if (!listo) return; // espera a que AuthContext resuelva si hay sesión, para no "parpadear" en modo invitado.
     let cancelado = false;
@@ -56,7 +60,7 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelado = true;
     };
-  }, [usuario, listo]);
+  }, [usuario, listo, intentoCarga]);
 
   // Solo se persiste localmente en modo invitado. Con sesión, Supabase ya es
   // la fuente y escribir en AsyncStorage además sería mezclar dos fuentes.
@@ -120,8 +124,9 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
       esFavorito,
       alternarFavorito,
       quitarFavorito,
+      recargar,
     }),
-    [idsFavoritos, cargando, error, esFavorito, alternarFavorito, quitarFavorito],
+    [idsFavoritos, cargando, error, esFavorito, alternarFavorito, quitarFavorito, recargar],
   );
 
   return <FavoritosContext.Provider value={valor}>{children}</FavoritosContext.Provider>;

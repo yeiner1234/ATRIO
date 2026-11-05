@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FilaProductoAdmin } from '@/components/admin/FilaProductoAdmin';
 import { AccionesAdmin, NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
@@ -25,6 +25,8 @@ export default function PantallaListaProductosAdmin() {
     totalSinFiltrar,
     categorias,
     cargando,
+    error,
+    recargar,
     busqueda,
     setBusqueda,
     categoriaId,
@@ -112,7 +114,19 @@ export default function PantallaListaProductosAdmin() {
           />
         )}
         ListEmptyComponent={
-          cargando ? undefined : (
+          cargando ? (
+            <View style={styles.cargando}>
+              <ActivityIndicator color={colores.tinta} />
+            </View>
+          ) : error && totalSinFiltrar === 0 ? (
+            <EstadoVacio
+              icono="alert-circle-outline"
+              titulo="No se pudo cargar"
+              descripcion={error}
+              textoBoton="REINTENTAR"
+              alPresionarBoton={() => void recargar()}
+            />
+          ) : (
             <EstadoVacio
               titulo="Sin productos"
               descripcion="No hay productos que coincidan con la búsqueda o los filtros."
@@ -142,4 +156,5 @@ const styles = StyleSheet.create({
   filtros: { paddingHorizontal: MEDIDAS.margenLateral, gap: ESPACIO.sm, paddingBottom: ESPACIO.sm },
   chips: { gap: ESPACIO.sm, paddingVertical: ESPACIO.xs },
   lista: { paddingBottom: ESPACIO.xxl },
+  cargando: { alignItems: 'center', paddingVertical: ESPACIO.enorme },
 });

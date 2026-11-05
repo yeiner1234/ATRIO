@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { router } from 'expo-router';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
 import { EstadoVacio } from '@/components/common/EstadoVacio';
@@ -14,7 +14,7 @@ import { useFavoritos } from '@/hooks/useFavoritos';
 export default function PantallaFavoritos() {
   const { colores: COLORS } = useTema();
   const styles = useMemo(() => crearEstilos(COLORS), [COLORS]);
-  const { productosFavoritos, quitarFavorito } = useFavoritos();
+  const { productosFavoritos, quitarFavorito, cargandoFavoritos, errorFavoritos, recargar } = useFavoritos();
   const { agregarItem } = useCarrito();
 
   const cantidad = productosFavoritos.length;
@@ -50,13 +50,27 @@ export default function PantallaFavoritos() {
           />
         )}
         ListEmptyComponent={
-          <EstadoVacio
-            icono="heart-outline"
-            titulo="Aún no guardas prendas"
-            descripcion="Guarda desde el catálogo o el detalle de producto para tenerlas a mano."
-            textoBoton="EXPLORAR CATÁLOGO"
-            alPresionarBoton={() => router.push('/(tabs)/catalogo')}
-          />
+          cargandoFavoritos ? (
+            <View style={styles.cargando}>
+              <ActivityIndicator color={COLORS.tinta} />
+            </View>
+          ) : errorFavoritos ? (
+            <EstadoVacio
+              icono="alert-circle-outline"
+              titulo="No se pudo cargar"
+              descripcion={errorFavoritos}
+              textoBoton="REINTENTAR"
+              alPresionarBoton={recargar}
+            />
+          ) : (
+            <EstadoVacio
+              icono="heart-outline"
+              titulo="Aún no guardas prendas"
+              descripcion="Guarda desde el catálogo o el detalle de producto para tenerlas a mano."
+              textoBoton="EXPLORAR CATÁLOGO"
+              alPresionarBoton={() => router.push('/(tabs)/catalogo')}
+            />
+          )
         }
       />
     </SafeAreaView>
@@ -72,4 +86,10 @@ const crearEstilos = (COLORS: Paleta) =>
     flexGrow: 1,
   },
   separador: { height: MEDIDAS.separacionSecciones },
+  cargando: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: ESPACIO.enorme,
+  },
 });

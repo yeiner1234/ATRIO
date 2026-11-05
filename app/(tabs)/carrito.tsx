@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EncabezadoPantalla } from '@/components/common/EncabezadoPantalla';
 import { EstadoVacio } from '@/components/common/EstadoVacio';
@@ -27,7 +27,17 @@ export default function PantallaCarrito() {
     aplicarCupon,
     quitarCupon,
     sincronizarCarrito,
+    cargando,
+    error,
   } = useCarrito();
+  // sincronizarCarrito es silencioso: esto da respuesta visual a REINTENTAR.
+  const [reintentando, setReintentando] = useState(false);
+
+  const reintentar = async () => {
+    setReintentando(true);
+    await sincronizarCarrito();
+    setReintentando(false);
+  };
 
   // Cada vez que se abre la pestaña se releen los productos, para enterarse
   // si el admin desactivó alguno sin esperar a un nuevo inicio de sesión.
@@ -53,7 +63,17 @@ export default function PantallaCarrito() {
         }
       />
 
-      {vacio ? (
+      {vacio && (cargando || reintentando) ? (
+        <ActivityIndicator style={styles.cargando} color={colores.tinta} />
+      ) : vacio && error ? (
+        <EstadoVacio
+          icono="alert-circle-outline"
+          titulo="No se pudo cargar"
+          descripcion={error}
+          textoBoton="REINTENTAR"
+          alPresionarBoton={() => void reintentar()}
+        />
+      ) : vacio ? (
         <EstadoVacio
           titulo="Tu carrito está vacío"
           descripcion="Añade prendas desde el catálogo para continuar con la compra."
@@ -118,6 +138,7 @@ export default function PantallaCarrito() {
 
 const crearEstilos = (colores: Record<NombreColor, string>) => StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.papel },
+  cargando: { flex: 1 },
   itemsCabecera: {
     fontFamily: TIPOGRAFIA.mono,
     fontSize: 11,

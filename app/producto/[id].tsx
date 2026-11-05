@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotonPrimario } from '@/components/common/BotonPrimario';
 import { EstadoVacio } from '@/components/common/EstadoVacio';
@@ -22,6 +22,9 @@ export default function PantallaDetalleProducto() {
   const insets = useSafeAreaInsets();
   const {
     producto,
+    cargando,
+    error,
+    recargar,
     tallaSeleccionada,
     seleccionarTalla,
     tallasDisponibles,
@@ -35,6 +38,28 @@ export default function PantallaDetalleProducto() {
     contadorCarrito,
   } = useDetalleProducto(id ?? '');
   const { esFavorito, alternarFavorito } = useFavoritos();
+
+  if (cargando) {
+    return (
+      <SafeAreaView style={styles.pantalla}>
+        <ActivityIndicator style={styles.cargando} color={COLORS.tinta} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.pantalla}>
+        <EstadoVacio
+          icono="alert-circle-outline"
+          titulo="No se pudo cargar"
+          descripcion={error}
+          textoBoton="REINTENTAR"
+          alPresionarBoton={recargar}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (!producto) {
     return (
@@ -164,6 +189,7 @@ function FilaInfo({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 const crearEstilos = (COLORS: Paleta) =>
   StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: COLORS.papel },
+  cargando: { flex: 1 },
   contenido: { paddingHorizontal: MEDIDAS.margenLateral, paddingTop: ESPACIO.lg },
   meta: {
     fontFamily: TIPOGRAFIA.mono,

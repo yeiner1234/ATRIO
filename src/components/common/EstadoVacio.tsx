@@ -63,7 +63,8 @@ const styles = StyleSheet.create({
   },
   boton: {
     marginTop: ESPACIO.sm,
-    alignSelf: 'stretch',
+    alignSelf: 'center',
+    width: '100%',
     maxWidth: 280,
   },
 });
